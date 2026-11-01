@@ -31,3 +31,6 @@ blob-report/
 
 # agent scratchpad: local notes, drafts and hand-offs, never committed
 .context/
+
+# agent worktrees (Claude Code subagents), each a checkout of another branch
+.claude/worktrees/

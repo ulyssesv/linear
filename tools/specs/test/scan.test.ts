@@ -33,7 +33,7 @@ describe("collect", () => {
     expect(input.records).toEqual([{ path: "docs/records/001-bar.md", text: "record" }]);
   });
 
-  it("SEED-R9 scans test files and e2e sources, skipping dependencies and build output", async () => {
+  it("SEED-R9 scans test files and e2e sources, skipping dependencies, build output and dot-directories", async () => {
     const scanned = [
       "apps/web/e2e/helpers/server.ts",
       "apps/web/e2e/landing.ts",
@@ -52,6 +52,9 @@ describe("collect", () => {
       ".git/hooks/x.test.ts",
       "apps/web/.output/a.test.ts",
       "apps/web/coverage/a.test.ts",
+      ".claude/worktrees/agent-1/apps/web/test/a.test.ts",
+      ".github/scripts/x.test.ts",
+      "apps/web/.cache/a.test.ts",
     ];
     for (const path of [...scanned, ...ignored]) write(path, path);
 
