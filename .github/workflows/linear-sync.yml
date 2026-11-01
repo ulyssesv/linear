@@ -1,0 +1,42 @@
+# Mirrors docs/specs and docs/records to Linear documents (SEED-R12).
+# Pushes to main write; pull requests run a dry run and print the plan.
+# Needs the LINEAR_API_KEY repository secret (SEED T11, LIN-11).
+name: linear-sync
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/specs/**", "docs/records/**"]
+  pull_request:
+    paths:
+      - "docs/specs/**"
+      - "docs/records/**"
+      - "tools/specs/**"
+      - ".github/workflows/linear-sync.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linear-sync-${{ github.ref }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Install pnpm from packageManager (SEED-R2)
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')"
+      - run: pnpm install --frozen-lockfile
+      - name: Mirror specs and records to Linear (SEED-R10, SEED-R11, SEED-R12)
+        if: github.event_name != 'pull_request'
+        run: pnpm linear:sync
+      - name: Plan the mirror without writing (SEED-R12, SEED-R13)
+        if: github.event_name == 'pull_request'
+        run: pnpm linear:sync --dry-run

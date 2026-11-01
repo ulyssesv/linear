@@ -4,10 +4,12 @@
   "type": "module",
   "scripts": {
     "check:specs": "node src/cli.ts ../..",
+    "linear:sync": "node src/sync-cli.ts ../..",
     "test": "vitest run",
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@linear/sdk": "98.0.0",
     "yaml": "2.9.1"
   },
   "devDependencies": {

@@ -26,21 +26,26 @@ export function isTestFile(path: string): boolean {
 
 /** Reads the specs, records and test files under the repository root. Paths are root-relative. */
 export async function collect(root: string): Promise<CheckInput> {
-  const docs = async (dir: string): Promise<SourceFile[]> => {
-    const names = await readdir(join(root, dir)).catch(() => []);
-    const files = names.filter((name) => name.endsWith(".md") && name !== "README.md").sort();
-    return Promise.all(files.map((name) => read(root, `${dir}/${name}`)));
-  };
-
   const tests: string[] = [];
   await walk(root, "", tests);
   tests.sort();
 
   return {
-    specs: await docs("docs/specs"),
-    records: await docs("docs/records"),
+    ...(await collectDocs(root)),
     tests: await Promise.all(tests.map((path) => read(root, path))),
   };
+}
+
+/** Reads the specs and records under the repository root. Paths are root-relative. */
+export async function collectDocs(
+  root: string,
+): Promise<{ specs: SourceFile[]; records: SourceFile[] }> {
+  const docs = async (dir: string): Promise<SourceFile[]> => {
+    const names = await readdir(join(root, dir)).catch(() => []);
+    const files = names.filter((name) => name.endsWith(".md") && name !== "README.md").sort();
+    return Promise.all(files.map((name) => read(root, `${dir}/${name}`)));
+  };
+  return { specs: await docs("docs/specs"), records: await docs("docs/records") };
 }
 
 async function walk(root: string, dir: string, out: string[]): Promise<void> {
