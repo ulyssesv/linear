@@ -63,16 +63,17 @@ Non-goals:
   and `tools/` for repository tooling. Root scripts `dev`, `build`, `test`, `test:e2e`,
   `lint`, `typecheck`, `check:specs`, `linear:sync` and `check` (lint, typecheck, test,
   check:specs in sequence) exist and are what CI calls.
-- **SEED-R2** (check) Node and pnpm versions are pinned through `.nvmrc` and the
-  `engines` and `packageManager` fields of the root `package.json`. CI installs from
-  those.
+- **SEED-R2** (check) Node and pnpm versions are pinned in `mise.toml`, with checksums
+  in `mise.lock`, and agree with the `engines` and `packageManager` fields of the root
+  `package.json`. `mise install` sets up both. CI installs them through mise in one
+  local composite action that every workflow running pnpm uses.
 - **SEED-R3** (check) Biome is the only linter and formatter. `pnpm lint` fails on any
   lint or format diagnostic and CI runs it.
 - **SEED-R4** (check) TypeScript runs in strict mode in every package and
   `pnpm typecheck` covers the whole workspace.
 - **SEED-R5** (manual) The root holds `LICENSE` (MIT), `README.md` (purpose, how to run,
   env contract, pointer to the process), `AGENTS.md`, `CLAUDE.md` (symlink), `.gitignore` and
-  `.nvmrc`.
+  `mise.toml`.
 - **SEED-R6** (check) `.gitattributes` assigns Linear review categories: `docs/**` as
   review-documentation, test files as review-test, `pnpm-lock.yaml` as
   linguist-generated, agent guidance files as review-agent-guidance.
@@ -197,9 +198,10 @@ Layout:
 ├── docs/
 │   ├── specs/  records/  deploy.md
 ├── .github/
+│   ├── actions/setup/          Node and pnpm through mise, cached dependencies
 │   ├── workflows/              ci.yml  release.yml  smoke.yml  linear-sync.yml
 │   └── pull_request_template.md
-├── AGENTS.md  CLAUDE.md  Dockerfile  biome.json  pnpm-workspace.yaml  release-please-config.json
+├── AGENTS.md  CLAUDE.md  Dockerfile  biome.json  mise.toml  pnpm-workspace.yaml  release-please-config.json
 ```
 
 Tooling as a package. `tools/specs` is a workspace package so the checker and the sync
@@ -291,6 +293,8 @@ red-green-refactor: a failing test citing the requirement, the implementation, c
       with the smoke project (R27, R28)
 - [ ] T13 Not-found page, added after T4 review (R29)
 - [ ] T14 Task coverage in `check:specs`, from open question 2 (R30)
+- [ ] T15 Toolchain through mise: `mise.toml` and `mise.lock` replace `.nvmrc`, one
+      composite setup action for the workflows (R2, R5)
 
 ## 7. Open questions
 

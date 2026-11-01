@@ -1,0 +1,12 @@
+# Node and pnpm for this repository (SEED-R2). `mise install` installs them, verified
+# against the checksums in mise.lock; `mise lock` refreshes that file after a bump.
+# Bump node together with the Dockerfile's NODE_IMAGE and `engines` in package.json, and
+# pnpm together with `packageManager` (pnpm switches itself to that version regardless).
+min_version = "2026.9.16"
+
+[tools]
+node = "26.13.0"
+pnpm = "12.16.1"
+
+[settings]
+lockfile = true

@@ -12,7 +12,7 @@ ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 WORKDIR /src
 
 # Manifests first so the dependency layer is cached across source changes.
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .nvmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json apps/web/
 COPY tools/specs/package.json tools/specs/
 RUN corepack install && pnpm install --frozen-lockfile --filter @sesv/web

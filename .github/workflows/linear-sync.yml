@@ -13,6 +13,9 @@ on:
       - "docs/records/**"
       - "tools/specs/**"
       - ".github/workflows/linear-sync.yml"
+      - ".github/actions/setup/**"
+      - "mise.toml"
+      - "mise.lock"
   workflow_dispatch:
 
 permissions:
@@ -28,12 +31,8 @@ jobs:
       LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-      - name: Install pnpm from packageManager through corepack (SEED-R2)
-        run: npm i -g corepack@0.36.0 && corepack enable
-      - run: pnpm install --frozen-lockfile
+      - name: Node and pnpm from mise.toml, then install (SEED-R2)
+        uses: ./.github/actions/setup
       - name: Mirror specs and records to Linear (SEED-R10, SEED-R11, SEED-R12)
         if: github.event_name != 'pull_request'
         run: pnpm linear:sync

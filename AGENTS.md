@@ -28,6 +28,7 @@ flows from Linear into files automatically.
 - `apps/web`: the single deployable. `packages/`: code shared by applications. `tools/`: repository tooling.
 - `docs/deploy.md`: the hand-off to infra: image, port, probes, env contract, security context.
 - `.github/workflows/`: `ci.yml`, `release.yml`, `smoke.yml`, `linear-sync.yml`.
+  `.github/actions/setup`: Node, pnpm and dependencies for every workflow that runs pnpm.
 - Working notes, drafts and hand-offs go in `.context/` at the repository root, the
   agent scratchpad. Git ignores it; nothing in it is a deliverable or a source of truth.
 
@@ -92,13 +93,18 @@ can be edited at any time.
 
 ## Commands
 
-Node 26 and pnpm 12, pinned by `.nvmrc` and `packageManager`. Node 26 no longer ships
-corepack: `npm i -g corepack@0.36.0 && corepack enable` once, then pnpm comes from
-`packageManager`. CI, the Dockerfile and the workflows set up the same way. Keep this
-table current when a script is added or changes.
+Node 26 and pnpm 12, pinned in `mise.toml` with checksums in `mise.lock`. With mise
+activated in the shell, `mise install` sets both up; `packageManager` and `engines` in
+`package.json` agree with it, and pnpm switches itself to `packageManager` regardless.
+Workflows set up through `.github/actions/setup`, which installs the same versions with
+mise. The Dockerfile pins Node by its base image and gets pnpm through corepack. Bump a
+version in all of those places, then run `mise lock`. Keep this table current when a
+script is added or changes.
 
 | Command | What |
 |---|---|
+| `mise install` | Install Node and pnpm from `mise.toml` |
+| `mise lock` | Refresh `mise.lock` checksums after a version bump in `mise.toml` |
 | `pnpm install` | Install the workspace |
 | `pnpm check` | lint, typecheck, test, check:specs in sequence; the first half of CI |
 | `pnpm lint` | Biome lint and format check (`biome ci`); Markdown is excluded |
