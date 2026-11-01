@@ -1,7 +1,7 @@
 ---
 id: SEED
 title: Seed the repository, process, delivery pipeline and placeholder site
-status: approved
+status: implementing
 area: site-platform
 linear:
   initiative: https://linear.app/sesv/initiative/site-platform-6ac5ff8c3199
@@ -286,8 +286,8 @@ red-green-refactor: a failing test citing the requirement, the implementation, c
    token once the planning sheet creates that app.
 2. Whether `check:specs` should also require every task to name at least one
    requirement.
-3. Which Node major to pin: the current LTS at scaffold time, revisited at each LTS
-   promotion.
+3. Resolved in T1: Node 26, the active LTS at scaffold time (promoted 2026-10-28), with
+   pnpm 12. Revisited at each LTS promotion.
 
 ## 8. Decisions
 
