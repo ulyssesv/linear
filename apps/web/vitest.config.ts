@@ -6,7 +6,7 @@ export default defineConfig({
   resolve: { tsconfigPaths: true },
   define: buildInfoDefine(),
   test: {
-    include: ["test/**/*.test.ts", "src/**/*.test.ts"],
+    include: ["test/**/*.test.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
     globalSetup: ["test/global-setup.ts"],
   },
 });
