@@ -25,7 +25,9 @@ flows from Linear into files automatically.
 
 - `docs/specs/NNN-slug.md`: what to build, with requirement ids that tests cite. Format in `docs/specs/README.md`.
 - `docs/records/NNN-slug.md`: decisions. Format in `docs/records/README.md`.
-- `apps/web`: the single deployable. `packages/`: code shared by applications. `tools/`: repository tooling. (Created by the seed spec.)
+- `apps/web`: the single deployable. `packages/`: code shared by applications. `tools/`: repository tooling.
+- `docs/deploy.md`: the hand-off to infra: image, port, probes, env contract, security context.
+- `.github/workflows/`: `ci.yml`, `release.yml`, `smoke.yml`, `linear-sync.yml`.
 - Working notes, drafts and hand-offs go in `.context/` at the repository root, the
   agent scratchpad. Git ignores it; nothing in it is a deliverable or a source of truth.
 
@@ -56,14 +58,18 @@ can be edited at any time.
    alternatives. Decide only what the spec needs now and defer the rest to the spec that
    will need it.
 2. Write the spec, mirror it to Linear, stop for review. Address comments in the file,
-   mirror again, reply on each thread with what changed.
+   mirror again, reply on each thread with what changed. A draft on a branch is mirrored
+   with `pnpm linear:sync`; once merged, `linear-sync.yml` keeps the mirror current.
 3. On approval, create the issues and move the parent forward.
 4. One issue at a time: branch with Linear's branch name, red-green-refactor with tests
    that cite requirement ids, one pull request per issue with a Conventional Commits
    title, issue to In Review once the pull request is ready, review in Linear Diffs,
    squash merge. The author approves and merges on GitHub.
-5. release-please opens a release pull request; merging it tags `v*`, which builds and
-   publishes the container image. Infra pins the digest and rolls it out.
+5. release-please keeps a release pull request open on `main` with the next version and
+   `CHANGELOG.md`. Merging it tags `v*` and creates the GitHub release; `release.yml`
+   builds the image, smoke-tests it and publishes it to GHCR with the
+   `<tag>@sha256:...` reference in the release notes. Infra pins that reference and
+   rolls it out (`docs/deploy.md`); the `smoke` workflow confirms the served commit.
 
 ## Conduct
 
@@ -76,8 +82,9 @@ can be edited at any time.
 - Every change to `main` goes through a pull request. No direct pushes after the seed
   commit.
 - Specs state testable requirements. Design notes explain; they do not legislate.
-- Keep the mirror current: `pnpm linear:sync` once it exists, by hand through the Linear
-  API until then.
+- Keep the mirror current. `linear-sync.yml` mirrors on every push to `main` that touches
+  `docs/specs` or `docs/records`; run `pnpm linear:sync` yourself only to mirror a draft
+  from a branch. Both need `LINEAR_API_KEY`.
 - Prefer no new dependency over a small convenience. A few lines in a workflow beat a
   third-party action.
 - Keep `.gitattributes` review categories accurate when adding paths, so Linear Diffs
@@ -85,17 +92,29 @@ can be edited at any time.
 
 ## Commands
 
-Node 26 and pnpm 12, pinned by `.nvmrc` and `packageManager`. Kept current as the seed
-spec lands.
+Node 26 and pnpm 12, pinned by `.nvmrc` and `packageManager`. Node 26 no longer ships
+corepack: `npm i -g corepack@0.36.0 && corepack enable` once, then pnpm comes from
+`packageManager`. CI, the Dockerfile and the workflows set up the same way. Keep this
+table current when a script is added or changes.
 
 | Command | What |
 |---|---|
 | `pnpm install` | Install the workspace |
-| `pnpm check` | lint, typecheck, test, check:specs in sequence; what CI runs |
+| `pnpm check` | lint, typecheck, test, check:specs in sequence; the first half of CI |
 | `pnpm lint` | Biome lint and format check (`biome ci`); Markdown is excluded |
 | `pnpm format` | Apply Biome fixes and formatting |
 | `pnpm typecheck` | `tsc` in every package |
-| `pnpm test` | Unit tests in every package |
-| `pnpm check:specs` | Spec and record structure, requirement traceability (T2) |
-| `pnpm dev`, `build`, `test:e2e` | Web app (T3 to T5) |
-| `pnpm linear:sync` | Mirror specs and records to Linear (T9) |
+| `pnpm test` | Unit tests (Vitest) in every package |
+| `pnpm check:specs` | Spec and record structure, task coverage, requirement traceability |
+| `pnpm dev` | Web app with Vite at http://localhost:3000 |
+| `pnpm build` | Production build into `apps/web/dist`; `APP_VERSION` and `APP_COMMIT` set the build info |
+| `node apps/web/dist/cli.mjs [serve]` | Run the build; `PORT` and `PUBLIC_URL` per `docs/deploy.md` |
+| `pnpm test:e2e` | Playwright `local` project against the built server on port 3100; run `pnpm build` first |
+| `pnpm test:smoke` | Playwright `smoke` project against `BASE_URL`, asserting `EXPECTED_COMMIT` when set |
+| `pnpm smoke:container <image>` | Run an image under the production security flags and check `/healthz` and the reserved commands |
+| `pnpm linear:sync [--dry-run]` | Mirror specs and records to Linear documents; `--dry-run` prints the plan and writes nothing |
+
+Playwright needs Chromium once per machine:
+`pnpm --filter @sesv/web exec playwright install chromium` (add `--with-deps` on Linux).
+`docker build --build-arg APP_VERSION=<v> --build-arg APP_COMMIT=<sha> -t <image> .`
+builds the image.

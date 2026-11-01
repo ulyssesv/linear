@@ -34,4 +34,8 @@ that replaces it.
 ## Mirror
 
 Each record is mirrored as a document titled `REC-NNN <title>` on the initiative in its
-front matter. The file is the source of truth.
+front matter, by `pnpm linear:sync` and the `linear-sync.yml` workflow, in the same way
+as specs (see `docs/specs/README.md`). The file is the source of truth.
+
+`pnpm check:specs` validates record front matter: an id matching the file number, a
+title, a known status and area, a date and a Linear initiative URL.

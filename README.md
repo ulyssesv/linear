@@ -15,18 +15,37 @@ Status: scaffolding. The first spec, `docs/specs/001-seed.md`, is being implemen
 
 ## Develop
 
-Requires Node 26 (`.nvmrc`) and pnpm 12 (pinned by `packageManager`).
+Requires Node 26 (`.nvmrc`) and pnpm 12 (pinned by `packageManager`). Node 26 no longer
+ships corepack; install it once with `npm i -g corepack@0.36.0 && corepack enable`.
 
 ```sh
 pnpm install
+pnpm dev          # http://localhost:3000
 pnpm check        # lint, typecheck, unit tests, spec checks
+pnpm build        # production build into apps/web/dist
+pnpm test:e2e     # Playwright against the build; needs Chromium once:
+                  # pnpm --filter @sesv/web exec playwright install chromium
+node apps/web/dist/cli.mjs   # serve the build
 ```
 
-Root scripts: `dev`, `build`, `test`, `test:e2e`, `lint`, `format`, `typecheck`,
-`check:specs`, `linear:sync`, `check`. Layout: `apps/web` is the site, `packages/` holds
-code shared by applications, `tools/` holds repository tooling.
+Every root script is listed in `AGENTS.md`. Layout: `apps/web` is the site, `packages/`
+holds code shared by applications, `tools/` holds repository tooling.
 
-The environment contract is documented once the server lands (spec SEED, T10).
+## Run
+
+One container image, `ghcr.io/ulyssesv/linear`, published on every `v*` release.
+`docs/deploy.md` is the full contract: port 3000, `/healthz` and `/readyz`, entrypoint
+commands, security context and resource hints.
+
+Environment, validated at startup (the server exits non-zero listing what is wrong):
+
+| Name | Default | |
+|---|---|---|
+| `PORT` | `3000` | Listen port |
+| `PUBLIC_URL` | `http://localhost:3000` | External origin, `https://linear.sesv.co` in production |
+| `DATABASE_URL`, `ELECTRIC_URL`, `ELECTRIC_SECRET`, `SESSION_SECRET`, `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET` | | Reserved for the planning sheet; accepted, unused |
+
+## Process
 
 Start here:
 
@@ -34,3 +53,4 @@ Start here:
 - `docs/specs/README.md` and `docs/records/README.md`: file formats.
 - `docs/specs/001-seed.md`: the seed spec.
 - `docs/records/`: decision records.
+- `docs/deploy.md`: the hand-off to infra.
