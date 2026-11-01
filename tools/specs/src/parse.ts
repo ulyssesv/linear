@@ -13,6 +13,11 @@ const REQUIREMENT_LIKE = /^\s*[-*+]\s+\*\*[A-Za-z][A-Za-z0-9]*-[Rr]/;
 export const TASK_LINE = /^- \[[ x]\] T(\d+) /;
 /** A bullet with a checkbox (`[ ]`, `[x]`, `[]`, ...); must then match TASK_LINE. Links are not checkboxes. */
 const TASK_LIKE = /^\s*[-*+]\s+\[.?\]/;
+/** An indented, non-empty line that continues the task item above it. */
+const CONTINUATION = /^\s+\S/;
+/** The parenthesis that ends a task item, and one entry in it: `R8` or `R1 to R6`. */
+const TRAILING_PARENTHESIS = /\(([^()]*)\)\s*$/;
+const NAME = /^R(\d+)(?: to R(\d+))?$/;
 
 const FENCE = /^\s*(```|~~~)/;
 
@@ -73,8 +78,15 @@ export function parseFrontMatter(text: string): FrontMatter {
   return { ok: true, data: data as Record<string, unknown>, lineOf, bodyStart: close + 1 };
 }
 
-export type Requirement = { key: string; id: string; tag: RequirementTag; line: number };
-export type Task = { number: number; line: number };
+export type Requirement = {
+  key: string;
+  id: string;
+  number: number;
+  tag: RequirementTag;
+  line: number;
+};
+/** `names` holds the requirement numbers the task covers, or is undefined when it names none. */
+export type Task = { number: number; line: number; names: number[] | undefined };
 export type Malformed = { kind: "requirement" | "task"; line: number; text: string };
 
 export type Body = { requirements: Requirement[]; tasks: Task[]; malformed: Malformed[] };
@@ -97,17 +109,39 @@ export function parseBody(text: string, bodyStart: number): Body {
     const requirement = REQUIREMENT_LINE.exec(raw);
     if (requirement) {
       const [, key = "", number = "", tag = ""] = requirement;
-      body.requirements.push({ key, id: `${key}-R${number}`, tag: tag as RequirementTag, line });
+      body.requirements.push({
+        key,
+        id: `${key}-R${number}`,
+        number: Number(number),
+        tag: tag as RequirementTag,
+        line,
+      });
     } else if (REQUIREMENT_LIKE.test(raw)) {
       body.malformed.push({ kind: "requirement", line, text: raw.trim() });
     }
 
     const task = TASK_LINE.exec(raw);
     if (task) {
-      body.tasks.push({ number: Number(task[1]), line });
+      let end = i + 1;
+      while (CONTINUATION.test(lines[end] ?? "")) end++;
+      const item = lines.slice(i, end).map((part) => part.trim());
+      body.tasks.push({ number: Number(task[1]), line, names: parseNames(item.join(" ")) });
     } else if (TASK_LIKE.test(raw)) {
       body.malformed.push({ kind: "task", line, text: raw.trim() });
     }
   }
   return body;
+}
+
+/** Reads the requirement numbers from the parenthesis that ends a task item. */
+function parseNames(item: string): number[] | undefined {
+  const inner = TRAILING_PARENTHESIS.exec(item)?.[1];
+  if (inner === undefined) return undefined;
+  const names: number[] = [];
+  for (const entry of inner.split(",")) {
+    const [, from, to = from] = NAME.exec(entry.trim()) ?? [];
+    if (from === undefined || Number(to) < Number(from)) return undefined;
+    for (let n = Number(from); n <= Number(to); n++) names.push(n);
+  }
+  return names;
 }

@@ -333,6 +333,7 @@ describe("citations", () => {
       `- **${req(1)}** (check) A CI step.`,
       `- **${req(2)}** (manual) A person.`,
       `- **${req(3)}** (dropped) Gone.`,
+      "- [ ] T1 Build and check (R1, R2)",
     ];
     const { errors, pending } = run({ specs: [spec({ status: "done" }, body)], tests: [] });
     expect(messages(errors)).toEqual([]);
@@ -349,5 +350,69 @@ describe("citations", () => {
     const { errors, pending } = run({ tests });
     expect(pending.map((p) => p.id)).toContain(req(1));
     expect(messages(errors)).toEqual([expect.stringContaining(req(10))]);
+  });
+});
+
+describe("task coverage", () => {
+  const requirements = [
+    `- **${req(1)}** (unit) One.`,
+    `- **${req(2)}** (unit) Two.`,
+    `- **${req(3)}** (check) Three.`,
+    `- **${req(4)}** (manual) Four.`,
+    `- **${req(5)}** (dropped) Five.`,
+  ];
+  const errorsFor = (tasks: string[]) =>
+    run({ specs: [spec({}, [...requirements, "", ...tasks])], tests: [] }).errors;
+
+  it("SEED-R30 accepts single ids, lists, ranges and wrapped tasks", () => {
+    const tasks = [
+      "- [ ] T1 Single (R1)",
+      "- [x] T2 A task that wraps over",
+      "      an indented continuation line (R2,",
+      "      R3)",
+      "- [ ] T3 Range and list (R3 to R4, R1)",
+    ];
+    expect(messages(errorsFor(tasks))).toEqual([]);
+  });
+
+  it.each([
+    ["no parenthesis", "- [ ] T2 Nothing named"],
+    ["a parenthesis that is not ids", "- [ ] T2 Nothing named (manual)"],
+    ["a parenthesis that is not at the end", "- [ ] T2 Names (R2) mid-sentence"],
+    ["the spec prefix", `- [ ] T2 Prefixed (${req(2)})`],
+    ["a backward range", "- [ ] T2 Backward (R3 to R2)"],
+  ])("SEED-R30 fails when a task names no requirement: %s, at the task line", (_, line) => {
+    const file = spec({}, [...requirements, "", "- [ ] T1 Covers (R1 to R4)", line]);
+    const { errors } = run({ specs: [file], tests: [] });
+    expect(errors).toEqual([
+      { path: file.path, line: lineOf(file.text, line), message: expect.stringContaining("T2") },
+    ]);
+  });
+
+  it("SEED-R30 ends a task at the first line that is not indented", () => {
+    const errors = errorsFor(["- [ ] T1 Covers", "(R1 to R4)"]);
+    expect(messages(errors)).toContainEqual(expect.stringMatching(/T1 names no requirement/));
+  });
+
+  it("SEED-R30 fails when a requirement not dropped is named by no task, at its line", () => {
+    const file = spec({}, [...requirements, "", "- [ ] T1 Some (R1, R3)"]);
+    const { errors } = run({ specs: [file], tests: [] });
+    expect(errors).toEqual([
+      {
+        path: file.path,
+        line: lineOf(file.text, `**${req(2)}**`),
+        message: expect.stringContaining(req(2)),
+      },
+      {
+        path: file.path,
+        line: lineOf(file.text, `**${req(4)}**`),
+        message: expect.stringContaining(req(4)),
+      },
+    ]);
+  });
+
+  it("SEED-R30 fails when a task names a requirement the spec does not define", () => {
+    const errors = errorsFor(["- [ ] T1 All (R1 to R4, R9)"]);
+    expect(messages(errors)).toEqual([expect.stringContaining(req(9))]);
   });
 });
