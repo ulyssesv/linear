@@ -1,0 +1,15 @@
+# Line endings
+* text=auto eol=lf
+
+# Linear Diffs review categories (https://linear.app/docs/diffs)
+# Last matching line wins.
+*.md                      review-documentation
+docs/**                   review-documentation
+**/*.test.ts              review-test
+**/*.test.tsx             review-test
+**/e2e/**                 review-test
+pnpm-lock.yaml            linguist-generated=true
+CHANGELOG.md              linguist-generated=true
+CLAUDE.md                 review-agent-guidance
+AGENTS.md                 review-agent-guidance
+.claude/**                review-agent-guidance
