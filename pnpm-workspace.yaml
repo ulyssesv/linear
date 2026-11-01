@@ -4,3 +4,7 @@ packages:
   - tools/*
 
 engineStrict: true
+
+# Link dependencies from one virtual store shared by every checkout on the machine,
+# inside the pnpm store, instead of building node_modules/.pnpm in each worktree.
+virtualStoreType: global
