@@ -11,6 +11,7 @@ docs/**                   review-documentation
 **/test/**                review-test
 pnpm-lock.yaml            linguist-generated=true
 CHANGELOG.md              linguist-generated=true
+**/routeTree.gen.ts        linguist-generated=true
 CLAUDE.md                 review-agent-guidance
 AGENTS.md                 review-agent-guidance
 .claude/**                review-agent-guidance

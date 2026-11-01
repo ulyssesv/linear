@@ -3,8 +3,9 @@
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/*.md"]
+    "includes": ["**", "!**/*.md", "!**/routeTree.gen.ts"]
   },
+  "css": { "parser": { "tailwindDirectives": true } },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "linter": { "enabled": true, "rules": { "preset": "recommended" } },
   "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } }
