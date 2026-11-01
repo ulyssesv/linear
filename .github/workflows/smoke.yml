@@ -1,0 +1,53 @@
+# Smoke a deployed site (SEED-R27). Runs the Playwright `smoke` project against BASE_URL on a
+# GitHub-hosted runner, since linear.sesv.co is public. With an expected commit it also
+# asserts the site serves that commit, which is how a rollout is confirmed.
+name: smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Site to check (BASE_URL)
+        required: true
+        default: https://linear.sesv.co
+        type: string
+      expected_commit:
+        description: Commit the site must serve, full or short SHA (EXPECTED_COMMIT); empty skips that check
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Playwright smoke project against BASE_URL (SEED-R27)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node from .nvmrc (SEED-R2)
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Enable pnpm from packageManager (SEED-R2)
+        run: npm install --global corepack@0.36.0 && corepack enable
+
+      - name: Install (SEED-R2)
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm --filter @sesv/web exec playwright install --with-deps chromium
+
+      - name: Run the smoke project (SEED-R27)
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          EXPECTED_COMMIT: ${{ inputs.expected_commit }}
+        run: pnpm test:smoke
