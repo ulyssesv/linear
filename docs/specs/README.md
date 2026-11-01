@@ -76,7 +76,18 @@ ranges written `R1 to R6`. An item may wrap over indented continuation lines:
 
 Every task names at least one requirement, and every requirement not tagged `dropped`
 is named by at least one task, so nothing is specified without a task to build it.
-`pnpm check:specs` enforces both (SEED-R30).
+`pnpm check:specs` enforces both (SEED-R30), and also fails when a task names an id the
+spec does not define. Anything else in the trailing parenthesis, such as a prefixed
+`(SEED-R8)` or a backward range, counts as naming nothing.
 
 Each task becomes an issue under the spec's Linear parent (an issue of the project, or a
 sub-issue of the issue), titled `T<n> <task>`.
+
+## Mirror
+
+Each spec is mirrored as a document titled `SPEC-NNN <title>` on the Linear parent in
+its front matter. The body is the file after the front matter, without the leading H1,
+under one line that links the file at the synced commit. `linear-sync.yml` runs
+`pnpm linear:sync` on every push to `main` that touches `docs/specs` or `docs/records`;
+the script finds the document by its title prefix, so runs never duplicate it. The file
+is the source of truth; edits made in Linear are overwritten.
