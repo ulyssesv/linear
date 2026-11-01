@@ -1,0 +1,16 @@
+{
+  "name": "@sesv/specs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:specs": "node src/cli.ts ../..",
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "vitest": "5.0.5"
+  }
+}

@@ -86,9 +86,10 @@ Non-goals:
   front matter is missing or invalid (unknown status or area, missing Linear parent),
   when a spec id or requirement id is duplicated, or when a requirement or task line is
   malformed.
-- **SEED-R9** (unit) `pnpm check:specs` fails when a requirement tagged `unit` or `e2e`
-  is cited by no test file, or when a test cites an id that no spec defines. Dropped
-  requirements are exempt.
+- **SEED-R9** (unit) `pnpm check:specs` fails when a test cites an id that no spec
+  defines, or when a spec with status `done` has a requirement tagged `unit` or `e2e`
+  that no test file cites. For a spec in any other status it lists those uncited
+  requirements as pending without failing. Dropped requirements are exempt.
 
 ### Linear mirror
 
@@ -216,9 +217,9 @@ with `node`, behind a TLS-terminating proxy, with `PUBLIC_URL` as the external o
 
 Spec checker. Front matter parsed with the `yaml` package and validated against a
 schema. Requirement lines match
-`^- \*\*([A-Z]+)-R(\d+)\*\* \((unit|e2e|check|manual|dropped)\)`; task lines match
+`^- \*\*([A-Z][A-Z0-9]*)-R(\d+)\*\* \((unit|e2e|check|manual|dropped)\)`; task lines match
 `^- \[[ x]\] T(\d+) `. Sections are not checked; the author chooses them. Citations are
-found by scanning `*.test.ts`, `*.test.tsx` and `e2e/**/*.ts` for `[A-Z]+-R\d+`.
+found by scanning `*.test.ts`, `*.test.tsx` and `e2e/**/*.ts` for `\b[A-Z][A-Z0-9]*-R\d+\b`.
 
 Sync script. `@linear/sdk` against the GraphQL API. Parent and initiative are resolved
 from the URL slug in front matter; a parent URL under `/project/` or `/issue/` decides
