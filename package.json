@@ -13,6 +13,7 @@
     "build": "pnpm -r --if-present run build",
     "test": "pnpm -r --if-present run test",
     "test:e2e": "pnpm --filter @sesv/web --if-present run test:e2e",
+    "test:smoke": "pnpm --filter @sesv/web run test:smoke",
     "lint": "biome ci .",
     "format": "biome check --write .",
     "typecheck": "pnpm -r --if-present run typecheck",
