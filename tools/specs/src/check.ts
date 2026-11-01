@@ -107,6 +107,35 @@ export function check(input: CheckInput): CheckResult {
         tasks.set(task.number, task.line);
       }
     }
+
+    // Tasks and requirements name each other.
+    const numbers = new Set(spec.body.requirements.map((requirement) => requirement.number));
+    const named = new Set<number>();
+    for (const task of spec.body.tasks) {
+      if (task.names === undefined) {
+        report(
+          path,
+          task.line,
+          `task T${task.number} names no requirement; end it with the ids it covers, like (R1, R2) or (R1 to R3)`,
+        );
+        continue;
+      }
+      for (const n of task.names) {
+        named.add(n);
+        if (!numbers.has(n)) {
+          report(
+            path,
+            task.line,
+            `task T${task.number} names ${spec.id ?? "?"}-R${n}, which this spec does not define`,
+          );
+        }
+      }
+    }
+    for (const requirement of spec.body.requirements) {
+      if (requirement.tag !== "dropped" && !named.has(requirement.number)) {
+        report(path, requirement.line, `${requirement.id} is named by no task`);
+      }
+    }
   }
 
   // Citations.

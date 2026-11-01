@@ -53,7 +53,7 @@ export function markdown(frontMatter: Record<string, unknown>, body: string[] = 
   return `---\n${stringify(frontMatter)}---\n\n${body.join("\n")}\n`;
 }
 
-/** A valid spec body: two unit requirements, one manual, one dropped, two tasks. */
+/** A valid spec body: a unit, an e2e, a manual and a dropped requirement; two tasks covering them. */
 export function specBody(key: string = KEY): string[] {
   return [
     `# ${key}: Fixture`,
@@ -68,7 +68,7 @@ export function specBody(key: string = KEY): string[] {
     "## Tasks",
     "",
     "- [ ] T1 Do the first thing (R1)",
-    "- [x] T2 Do the second thing (R2)",
+    "- [x] T2 Do the second thing (R2, R3)",
   ];
 }
 
