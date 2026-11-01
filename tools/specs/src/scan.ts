@@ -2,16 +2,13 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { CheckInput, SourceFile } from "./check.ts";
 
-/** Directories never scanned: dependencies, VCS, the agent scratchpad and build output. */
+/**
+ * Directories never scanned besides dot-directories (VCS, the agent scratchpad, agent
+ * worktrees under `.claude/`, tool caches): dependencies and build or test output.
+ */
 const SKIP = new Set([
-  ".git",
-  ".context",
-  ".pnpm-store",
   "node_modules",
   "dist",
-  ".output",
-  ".tanstack",
-  ".vite",
   "coverage",
   "playwright-report",
   "test-results",
@@ -53,7 +50,7 @@ async function walk(root: string, dir: string, out: string[]): Promise<void> {
   for (const entry of entries) {
     const path = dir === "" ? entry.name : `${dir}/${entry.name}`;
     if (entry.isDirectory()) {
-      if (!SKIP.has(entry.name)) await walk(root, path, out);
+      if (!entry.name.startsWith(".") && !SKIP.has(entry.name)) await walk(root, path, out);
     } else if (entry.isFile() && isTestFile(path)) {
       out.push(path);
     }
