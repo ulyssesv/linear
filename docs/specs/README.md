@@ -57,6 +57,10 @@ it("SEED-R7 rejects a requirement line without a tag", () => { ... })
 // @req SEED-R7
 ```
 
+`pnpm check:specs` enforces citations once a spec reaches `done`: every `unit` or `e2e`
+requirement must be cited by a test. Before that it lists uncited requirements as
+pending. A citation of an id that no spec defines fails at any status.
+
 Ids are never renumbered or reused.
 
 ## Task lines
