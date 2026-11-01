@@ -28,3 +28,6 @@ blob-report/
 
 # logs
 *.log
+
+# agent scratchpad: local notes, drafts and hand-offs, never committed
+.context/
