@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { SiteFooter } from "@/components/site-footer";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -8,7 +9,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { buildInfo, shortCommit } from "@/server/build-info";
 import { proofsOfConcept, site } from "@/site";
 
 export const Route = createFileRoute("/")({
@@ -52,15 +52,7 @@ export function Landing() {
         </ul>
       </main>
 
-      <footer className="mt-12 flex flex-wrap items-center justify-between gap-2 border-t pt-6 text-muted-foreground text-sm">
-        <a href={site.repository} className="underline underline-offset-4 hover:text-foreground">
-          Source on GitHub
-        </a>
-        <span>
-          Version <span data-testid="version">{buildInfo.version}</span> · commit{" "}
-          <span data-testid="commit">{shortCommit(buildInfo.commit)}</span>
-        </span>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

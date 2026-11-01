@@ -1,5 +1,6 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import type { ReactNode } from "react";
+import { NotFound } from "@/components/not-found";
 import styles from "../styles.css?url";
 
 export const Route = createRootRoute({
@@ -17,6 +18,7 @@ export const Route = createRootRoute({
     links: [{ rel: "stylesheet", href: styles }],
   }),
   component: RootComponent,
+  notFoundComponent: NotFound,
 });
 
 function RootComponent() {
