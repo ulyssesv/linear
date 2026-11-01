@@ -1,0 +1,28 @@
+{
+  "name": "linear-sesv",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=26.13.0 <27",
+    "pnpm": "12.16.1"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @sesv/web run dev",
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test",
+    "test:e2e": "pnpm --filter @sesv/web --if-present run test:e2e",
+    "lint": "biome ci .",
+    "format": "biome check --write .",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "check:specs": "pnpm --filter @sesv/specs run check:specs",
+    "linear:sync": "pnpm --filter @sesv/specs run linear:sync",
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:specs"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4",
+    "@types/node": "26.6.6",
+    "typescript": "7.0.2"
+  }
+}

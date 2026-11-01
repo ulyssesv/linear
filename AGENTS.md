@@ -79,5 +79,17 @@ can be edited at any time.
 
 ## Commands
 
-Filled in as the seed spec lands: `pnpm dev`, `build`, `test`, `test:e2e`, `lint`,
-`typecheck`, `check:specs`, `linear:sync`, `check`.
+Node 26 and pnpm 12, pinned by `.nvmrc` and `packageManager`. Kept current as the seed
+spec lands.
+
+| Command | What |
+|---|---|
+| `pnpm install` | Install the workspace |
+| `pnpm check` | lint, typecheck, test, check:specs in sequence; what CI runs |
+| `pnpm lint` | Biome lint and format check (`biome ci`); Markdown is excluded |
+| `pnpm format` | Apply Biome fixes and formatting |
+| `pnpm typecheck` | `tsc` in every package |
+| `pnpm test` | Unit tests in every package |
+| `pnpm check:specs` | Spec and record structure, requirement traceability (T2) |
+| `pnpm dev`, `build`, `test:e2e` | Web app (T3 to T5) |
+| `pnpm linear:sync` | Mirror specs and records to Linear (T9) |

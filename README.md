@@ -11,7 +11,22 @@ Areas:
 - Site platform: this repository, its process and delivery pipeline.
 - Infra: running the site on the homelab cluster through the separate infra repository.
 
-Status: pre-scaffold. The first spec, `docs/specs/001-seed.md`, is in draft.
+Status: scaffolding. The first spec, `docs/specs/001-seed.md`, is being implemented.
+
+## Develop
+
+Requires Node 26 (`.nvmrc`) and pnpm 12 (pinned by `packageManager`).
+
+```sh
+pnpm install
+pnpm check        # lint, typecheck, unit tests, spec checks
+```
+
+Root scripts: `dev`, `build`, `test`, `test:e2e`, `lint`, `format`, `typecheck`,
+`check:specs`, `linear:sync`, `check`. Layout: `apps/web` is the site, `packages/` holds
+code shared by applications, `tools/` holds repository tooling.
+
+The environment contract is documented once the server lands (spec SEED, T10).
 
 Start here:
 
