@@ -26,7 +26,8 @@ flows from Linear into files automatically.
 - `docs/specs/NNN-slug.md`: what to build, with requirement ids that tests cite. Format in `docs/specs/README.md`.
 - `docs/records/NNN-slug.md`: decisions. Format in `docs/records/README.md`.
 - `apps/web`: the single deployable. `packages/`: code shared by applications. `tools/`: repository tooling. (Created by the seed spec.)
-- Working notes, drafts and hand-offs stay out of the repository. `docs/notes/` is ignored by git for that reason.
+- Working notes, drafts and hand-offs go in `.context/` at the repository root, the
+  agent scratchpad. Git ignores it; nothing in it is a deliverable or a source of truth.
 
 ## Linear mapping
 
