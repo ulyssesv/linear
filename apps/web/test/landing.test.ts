@@ -1,38 +1,18 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { createBuilder } from "vite";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, inject, it } from "vitest";
 import { proofsOfConcept, site } from "../src/site.ts";
 
-const root = join(import.meta.dirname, "..");
-let outDir: string;
 let html: string;
 let status: number;
 let contentType: string | null;
 
 beforeAll(async () => {
-  outDir = await mkdtemp(join(tmpdir(), "web-ssr-"));
-  const builder = await createBuilder({
-    root,
-    logLevel: "silent",
-    build: { outDir },
-    environments: {
-      client: { build: { outDir: join(outDir, "client") } },
-      ssr: { build: { outDir: join(outDir, "server") } },
-    },
-  });
-  await builder.buildApp();
-  const entry = await import(pathToFileURL(join(outDir, "server", "server.js")).href);
+  const entry = await import(pathToFileURL(join(inject("dist"), "server", "server.js")).href);
   const response: Response = await entry.default.fetch(new Request("http://localhost/"));
   status = response.status;
   contentType = response.headers.get("content-type");
   html = await response.text();
-}, 60_000);
-
-afterAll(async () => {
-  if (outDir) await rm(outDir, { recursive: true, force: true });
 });
 
 const withoutScripts = () => html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
@@ -56,7 +36,11 @@ describe("landing route", () => {
       expect(page).toContain(`href="${poc.link.href}"`);
     }
     expect(page).toContain(`href="${site.repository}"`);
-    expect(page).toMatch(/data-testid="version">[^<]+</);
-    expect(page).toMatch(/data-testid="commit">[^<]+</);
+  });
+
+  it("SEED-R17 SEED-R21 shows the built version and short commit in the footer", () => {
+    const page = withoutScripts();
+    expect(page).toContain(`data-testid="version">${inject("builtVersion")}<`);
+    expect(page).toContain(`data-testid="commit">${inject("builtCommit").slice(0, 7)}<`);
   });
 });

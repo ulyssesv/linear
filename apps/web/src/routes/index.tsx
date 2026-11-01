@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { buildInfo } from "@/build-info";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { buildInfo, shortCommit } from "@/server/build-info";
 import { proofsOfConcept, site } from "@/site";
 
 export const Route = createFileRoute("/")({
@@ -58,7 +58,7 @@ export function Landing() {
         </a>
         <span>
           Version <span data-testid="version">{buildInfo.version}</span> · commit{" "}
-          <span data-testid="commit">{buildInfo.commit}</span>
+          <span data-testid="commit">{shortCommit(buildInfo.commit)}</span>
         </span>
       </footer>
     </div>

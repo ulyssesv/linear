@@ -9,6 +9,7 @@
     "clsx": "2.1.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "srvx": "1.0.8",
     "tailwind-merge": "3.7.0"
   },
   "devDependencies": {
@@ -23,7 +24,8 @@
   },
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.cli.config.ts",
+    "start": "node dist/cli.mjs",
     "test": "vitest run",
     "typecheck": "tsc -p .",
     "preview": "vite preview"
