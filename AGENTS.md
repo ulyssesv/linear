@@ -60,13 +60,18 @@ can be edited at any time.
 3. On approval, create the issues and move the parent forward.
 4. One issue at a time: branch with Linear's branch name, red-green-refactor with tests
    that cite requirement ids, one pull request per issue with a Conventional Commits
-   title, review in Linear Diffs, squash merge.
+   title, review in Linear Diffs, squash merge. The author approves and merges on
+   GitHub.
 5. release-please opens a release pull request; merging it tags `v*`, which builds and
    publishes the container image. Infra pins the digest and rolls it out.
 
 ## Conduct
 
-- Commit only when asked, and show the change set first.
+- For each issue, commit, push and open the pull request without asking first. Then
+  post a summary in the chat: what changed, the manual steps needed (setup, secrets,
+  settings outside the repository), and how to verify the change by hand. The author
+  reviews in the pull request or in the chat; address the feedback on the same branch
+  and post an updated summary. Never merge; the author approves and merges on GitHub.
 - Every change to `main` goes through a pull request. No direct pushes after the seed
   commit.
 - Specs state testable requirements. Design notes explain; they do not legislate.
