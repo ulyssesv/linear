@@ -90,6 +90,11 @@ Non-goals:
   defines, or when a spec with status `done` has a requirement tagged `unit` or `e2e`
   that no test file cites. For a spec in any other status it lists those uncited
   requirements as pending without failing. Dropped requirements are exempt.
+- **SEED-R30** (unit) `pnpm check:specs` fails when a task line names no requirement, or
+  when a requirement not tagged `dropped` is named by no task. A task names requirements
+  in a parenthesis at the end of the item, which may wrap over indented continuation
+  lines, as single ids (`R8`), lists (`R8, R9`) or ranges (`R1 to R6`); the spec's id
+  prefix is implied.
 
 ### Linear mirror
 
@@ -136,6 +141,9 @@ Non-goals:
   a `checks` object when every registered readiness check passes, and 503 naming the
   failing checks otherwise. The seed registers no checks; the planning sheet registers
   the database.
+- **SEED-R29** (unit) A path that matches no route returns 404 with a server-rendered
+  not-found page that keeps the site name and footer and links back to `/`, and the
+  server logs no warning about a missing not-found component.
 - **SEED-R21** (unit) Version and commit come from build-time values `APP_VERSION` and
   `APP_COMMIT` injected by the Docker build and surfaced by `/healthz` and the page
   footer. Local builds fall back to `dev` and the git HEAD.
@@ -180,7 +188,7 @@ Layout:
 ```
 .
 ├── apps/web/                   TanStack Start app (React, Tailwind, shadcn/ui)
-│   ├── src/routes/             /  /healthz  /readyz
+│   ├── src/routes/             /  /healthz  /readyz  (not found)
 │   ├── src/server/             env schema, readiness registry, build info
 │   ├── src/cli.ts              entrypoint: serve | scheduler | migrate
 │   └── e2e/                    Playwright projects: local, smoke
@@ -275,18 +283,21 @@ red-green-refactor: a failing test citing the requirement, the implementation, c
       R26, R27)
 - [ ] T9 Linear sync script with tests and workflow (R10 to R13)
 - [ ] T10 Process docs: `AGENTS.md` commands section, pull-request template,
-      `docs/deploy.md`, README env contract (R14, R15, R28)
-- [ ] T11 Linear and GitHub setup: GitHub integration with code access for Diffs,
-      `LINEAR_API_KEY` secret, GHCR package visibility (manual)
+      `docs/deploy.md`, README env contract, spec and record format docs kept current
+      (R7, R14, R15, R28)
+- [ ] T11 Linear and GitHub setup, by hand: GitHub integration with code access for
+      Diffs, `LINEAR_API_KEY` secret, GHCR package visibility (R12, R26)
 - [ ] T12 First release `v0.1.0`, hand the digest to infra, verify https://linear.sesv.co
       with the smoke project (R27, R28)
+- [ ] T13 Not-found page, added after T4 review (R29)
+- [ ] T14 Task coverage in `check:specs`, from open question 2 (R30)
 
 ## 7. Open questions
 
 1. Linear API key for CI: a personal key for now, or the OAuth app's client-credentials
    token once the planning sheet creates that app.
-2. Whether `check:specs` should also require every task to name at least one
-   requirement.
+2. Resolved after T4: yes, in both directions. Every task names at least one
+   requirement and every requirement not dropped is named by a task (SEED-R30, T14).
 3. Resolved in T1: Node 26, the active LTS at scaffold time (promoted 2026-10-28), with
    pnpm 12. Revisited at each LTS promotion.
 

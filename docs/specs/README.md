@@ -65,12 +65,18 @@ Ids are never renumbered or reused.
 
 ## Task lines
 
-An ordered checklist. Each line carries a `T<n>` id and names the requirement ids it
-covers:
+An ordered checklist. Each item carries a `T<n>` id and ends with the requirement ids
+it covers in parentheses, without the spec prefix: single ids, comma-separated lists and
+ranges written `R1 to R6`. An item may wrap over indented continuation lines:
 
 ```
 - [ ] T2 Spec checker with tests (R8, R9)
+- [ ] T1 Workspace scaffold (R1 to R6)
 ```
+
+Every task names at least one requirement, and every requirement not tagged `dropped`
+is named by at least one task, so nothing is specified without a task to build it.
+`pnpm check:specs` enforces both (SEED-R30).
 
 Each task becomes an issue under the spec's Linear parent (an issue of the project, or a
 sub-issue of the issue), titled `T<n> <task>`.
