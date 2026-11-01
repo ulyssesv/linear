@@ -1,0 +1,141 @@
+# Release flow (SEED-R16, SEED-R26).
+#
+# On every push to main, release-please keeps a release pull request open with the next
+# version and CHANGELOG.md, worked out from the Conventional Commits titles merged since the
+# last release. Merging that pull request makes release-please tag v<version> and create the
+# GitHub release, and the image job then builds and publishes that tag.
+#
+# A tag created with the workflow's GITHUB_TOKEN does not start new workflow runs, so a
+# `push: tags` trigger alone would never fire for release-please's tags. The image job
+# therefore runs in the same run when release-please reports a release, on its own for a
+# v* tag pushed by a person, and on manual dispatch with an existing tag (to rebuild).
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v* tag to build and publish
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    name: Release pull request, changelog, version and tag (SEED-R16)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - name: Run release-please (SEED-R16)
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  image:
+    name: Image to GHCR (SEED-R26)
+    needs: release-please
+    if: >-
+      !cancelled() && needs.release-please.result != 'failure' && (
+      needs.release-please.outputs.release_created == 'true' ||
+      startsWith(github.ref, 'refs/tags/v') ||
+      github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      packages: write
+    env:
+      IMAGE: ghcr.io/${{ github.repository }}
+      TAG: ${{ needs.release-please.outputs.tag_name || inputs.tag || github.ref_name }}
+    steps:
+      - name: Check the tag (SEED-R26)
+        run: |
+          [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::'$TAG' is not a v<semver> tag"; exit 1; }
+
+      - name: Check out the tag
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/tags/${{ env.TAG }}
+          persist-credentials: false
+
+      - name: Resolve version and commit (SEED-R21)
+        run: |
+          {
+            echo "VERSION=${TAG#v}"
+            echo "COMMIT=$(git rev-parse HEAD)"
+            echo "SHORT=$(git rev-parse --short=7 HEAD)"
+          } >> "$GITHUB_ENV"
+
+      - name: Build the linux/amd64 image (SEED-R23, SEED-R26)
+        run: |
+          docker buildx build --platform linux/amd64 --load \
+            --build-arg "APP_VERSION=$VERSION" \
+            --build-arg "APP_COMMIT=$COMMIT" \
+            --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+            --label "org.opencontainers.image.revision=$COMMIT" \
+            --label "org.opencontainers.image.version=$VERSION" \
+            --tag "$IMAGE:$TAG" \
+            --tag "$IMAGE:sha-$SHORT" \
+            .
+
+      - name: Container smoke before pushing (SEED-R23, SEED-R24)
+        run: EXPECTED_VERSION="$VERSION" EXPECTED_COMMIT="$COMMIT" bash tools/container-smoke.sh "$IMAGE:$TAG"
+
+      - name: Push to GHCR (SEED-R26)
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          echo "$GHCR_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:$TAG"
+          docker push "$IMAGE:sha-$SHORT"
+          digest=$(docker buildx imagetools inspect "$IMAGE:$TAG" --format '{{.Manifest.Digest}}')
+          [[ $digest == sha256:* ]] || { echo "::error::no digest for $IMAGE:$TAG"; exit 1; }
+          echo "REF=$IMAGE:$TAG@$digest" >> "$GITHUB_ENV"
+
+      - name: Digest reference in the job summary (SEED-R26)
+        run: |
+          {
+            echo "## Container image"
+            echo
+            echo "Pin this reference in infra:"
+            echo
+            echo '```'
+            echo "$REF"
+            echo '```'
+            echo
+            echo "Also tagged \`$IMAGE:sha-$SHORT\`."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Digest reference in the release notes (SEED-R26)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          fence="\`\`\`"
+          section=$(printf '## Container image\n\n%s\n%s\n%s\n' "$fence" "$REF" "$fence")
+          if notes=$(gh release view "$TAG" --json body --jq .body 2>/dev/null); then
+            # Replace an earlier image section (a rebuild) instead of appending a second one.
+            notes=$(sed '/^## Container image$/,$d' <<<"$notes")
+            printf '%s\n\n%s\n' "$notes" "$section" > release-notes.md
+            gh release edit "$TAG" --notes-file release-notes.md
+          else
+            printf '%s\n' "$section" > release-notes.md
+            gh release create "$TAG" --verify-tag --title "$TAG" --notes-file release-notes.md
+          fi
