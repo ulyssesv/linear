@@ -33,19 +33,45 @@ node apps/web/dist/cli.mjs   # serve the build
 Every root script is listed in `AGENTS.md`. Layout: `apps/web` is the site, `packages/`
 holds code shared by applications, `tools/` holds repository tooling.
 
+### Local environment
+
+Public pages need nothing more. Sign-in, `/sheets` and the CLI's `serve` and `scheduler`
+need the variables in `.env.example`. Keep them in one `.env` at the root of the main
+checkout: `mise.toml` loads that file into the shell of the checkout and of every
+worktree, wherever it lives, so a rotated value changes in one place. Git ignores `.env`.
+
+1. Create a development OAuth app in Linear (Settings, API, OAuth applications), apart
+   from the production one: callback URL `http://localhost:3000/auth/linear/callback`,
+   client credentials enabled, webhooks off. Without a public tunnel Linear cannot reach
+   localhost, so the scheduler keeps the local mirror current instead of webhooks.
+2. `cp .env.example .env` in the main checkout and fill it: the app's client id and
+   secret, `openssl rand -base64 32` for `SESSION_SECRET` and for `TOKEN_ENCRYPTION_KEY`,
+   any value for `LINEAR_WEBHOOK_SECRET`, your email for `SIGNIN_ALLOWLIST`. Never reuse a
+   production value.
+3. `cd` out and back in (or open a new shell) so mise loads it; `mise env` shows the
+   names with values redacted.
+4. Prepare the database and fill the mirror once, then start the server:
+
+```sh
+pnpm db:up
+pnpm build
+node apps/web/dist/cli.mjs migrate
+node apps/web/dist/cli.mjs scheduler   # rerun to pick up changes made in Linear
+pnpm dev                               # sign in at http://localhost:3000/sign-in
+```
+
+No test uses the credentials or secrets from `.env`, and its `DATABASE_URL` is the
+compose database the tests fall back to anyway. The e2e server runs with fixed fakes and
+blanks every other name it reads, so `SIGNIN_ALLOWLIST` does not reach it.
+
 ## Run
 
 One container image, `ghcr.io/ulyssesv/linear`, published on every `v*` release.
 `docs/deploy.md` is the full contract: port 3000, `/healthz` and `/readyz`, entrypoint
 commands, security context and resource hints.
 
-Environment, validated at startup (the server exits non-zero listing what is wrong):
-
-| Name | Default | |
-|---|---|---|
-| `PORT` | `3000` | Listen port |
-| `PUBLIC_URL` | `http://localhost:3000` | External origin, `https://linear.sesv.co` in production |
-| `DATABASE_URL`, `ELECTRIC_URL`, `ELECTRIC_SECRET`, `SESSION_SECRET`, `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET` | | Reserved for the planning sheet; accepted, unused |
+Every command validates the environment it needs at startup and exits non-zero naming
+each missing or invalid variable; `docs/deploy.md` lists them all.
 
 ## Process
 

@@ -40,6 +40,11 @@ flows from Linear into files automatically.
 - `apps/web/src/server/auth`: sign in with Linear, sessions and encrypted per-user tokens.
   Routes under `/sheets` require a session; signed-in end-to-end tests use the `signIn`
   fixture of `apps/web/e2e/auth.ts`, which writes a session to the e2e database.
+- `.env` at the root of the main checkout: the local secrets for sign-in, `serve`,
+  `scheduler` and the Linear tools, loaded by `mise.toml` into every worktree's shell
+  through git's common directory. Gitignored; `.env.example` lists the names and README.md,
+  "Local environment", the setup with a development OAuth app. Never put a production value
+  in it. The e2e server ignores it except `DATABASE_URL`.
 - `compose.yaml`: the local Postgres, also started by CI. Tests and the dev server use it
   unless `DATABASE_URL` says otherwise.
 - `docs/deploy.md`: the hand-off to infra: image, port, probes, env contract, security context.
