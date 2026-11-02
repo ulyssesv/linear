@@ -440,7 +440,7 @@ export function planSeed(fixtures: FixtureSet, ws: Workspace, options: PlanOptio
       const detail =
         `${desired.status}, owner ${show(desired.ownerId)}, lead team ${show(desired.leadTeamId)}, ` +
         `target ${desired.targetDate ?? "none"}, priority ${desired.priority}, ` +
-        `labels ${show(desired.labelIds)}, ${f.projectKeys.length} projects`;
+        `labels ${show(desired.labelIds)}, linked to ${f.projectKeys.length}`;
       add({
         kind: "initiative",
         op: "create",

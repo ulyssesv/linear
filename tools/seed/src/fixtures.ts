@@ -221,6 +221,12 @@ function pick<T>(items: readonly T[], rand: () => number): T {
 
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10);
 
+/** The last day of a period such as "Q3 2026". */
+function quarterEnd(period: string): string {
+  const [q, year] = period.slice(1).split(" ").map(Number) as [number, number];
+  return day(Date.UTC(year, q * 3, 0));
+}
+
 function children(groups: LabelGroupFixture[], name: string): string[] {
   return groups.find((g) => g.name === name)?.children.map((c) => c.name) ?? [];
 }
@@ -282,19 +288,19 @@ export function generateFixtures(seed = DEFAULT_SEED): FixtureSet {
   });
 
   const initiativeNames = shuffled(
-    THEMES.flatMap((theme) => PERIODS.map((period) => `${theme}, ${period}`)),
+    THEMES.flatMap((theme) => PERIODS.map((period) => ({ theme, period }))),
     rand,
   );
-  const initiatives: InitiativeFixture[] = initiativeNames.map((name, i) => ({
+  const initiatives: InitiativeFixture[] = initiativeNames.map(({ theme, period }, i) => ({
     key: `I${String(i + 1).padStart(2, "0")}`,
-    name,
+    name: `${theme}, ${period}`,
     status:
       i < INITIATIVE_STATUSES.length
         ? (INITIATIVE_STATUSES[i] as InitiativeStatus)
         : pick(INITIATIVE_STATUSES, rand),
     ownerSlot: rand() < 0.1 ? null : Math.floor(rand() * LEAD_SLOTS),
     leadTeamSlot: rand() < 0.25 ? null : Math.floor(rand() * TEAM_SLOTS),
-    targetDate: rand() < 0.2 ? null : day(BASE_DATE + Math.floor(rand() * 100) * WEEK),
+    targetDate: rand() < 0.2 ? null : quarterEnd(period),
     priority: Math.floor(rand() * 5),
     labels: rand() < 0.8 ? [{ group: `${LABEL_PREFIX}Track`, name: pick(tracks, rand) }] : [],
     projectKeys: [],

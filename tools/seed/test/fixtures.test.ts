@@ -50,6 +50,11 @@ describe("generateFixtures", () => {
     expect(fixtures.projects.some((p) => p.targetDate === null)).toBe(true);
     expect(fixtures.projects.some((p) => p.startDate && p.targetDate)).toBe(true);
     expect(fixtures.initiatives.some((i) => i.targetDate === null)).toBe(true);
+    for (const i of fixtures.initiatives) {
+      const [, q, year] = /Q(\d) (\d{4})$/.exec(i.name) ?? [];
+      const end = { 1: "03-31", 2: "06-30", 3: "09-30", 4: "12-31" }[Number(q) as 1 | 2 | 3 | 4];
+      if (i.targetDate) expect(i.targetDate).toBe(`${year}-${end}`);
+    }
     for (const p of fixtures.projects) {
       if (p.startDate && p.targetDate) expect(p.startDate < p.targetDate).toBe(true);
       for (const d of [p.startDate, p.targetDate]) if (d) expect(d).toMatch(/^\d{4}-\d\d-\d\d$/);
