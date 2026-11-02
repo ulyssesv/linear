@@ -2,14 +2,20 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { buildInfo, shortCommit } from "./server/build-info.ts";
+import { closeDatabase, createSql } from "./server/db/client.ts";
+import { type MigrateResult, migrate } from "./server/db/migrate.ts";
+import { migrations } from "./server/db/migrations.ts";
 import { type Env, parseEnv } from "./server/env.ts";
 import { startServer } from "./server/start.ts";
+
+export type MigrateCommand = (env: Env & { DATABASE_URL: string }) => Promise<MigrateResult>;
 
 export type CliIo = {
   env: Readonly<Record<string, string | undefined>>;
   stdout: (line: string) => void;
   stderr: (line: string) => void;
   serve: (env: Env) => Promise<void>;
+  migrate: MigrateCommand;
 };
 
 const usage = "usage: cli.mjs [serve|scheduler|migrate]";
@@ -17,7 +23,6 @@ const usage = "usage: cli.mjs [serve|scheduler|migrate]";
 // Reserved commands exit 2 so a CronJob never reports success for work that did not happen.
 const reserved: Record<string, string> = {
   scheduler: "the planning-sheet spec that introduces the scheduler",
-  migrate: "the planning-sheet spec that introduces Postgres",
 };
 
 /** Runs a command. Resolves to an exit code, or to undefined while the server keeps running. */
@@ -27,15 +32,19 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number | 
     io.stderr(usage);
     return 1;
   }
-  if (command === "serve") {
-    const result = parseEnv(io.env);
+  if (command === "serve" || command === "migrate") {
+    const result = parseEnv(io.env, ["DATABASE_URL"]);
     if (!result.ok) {
       io.stderr("Invalid environment:");
       for (const error of result.errors) io.stderr(`  ${error}`);
       return 1;
     }
-    await io.serve(result.env);
-    return undefined;
+    if (command === "serve") {
+      await io.serve(result.env);
+      return undefined;
+    }
+    // Required above, so parseEnv has set it.
+    return runMigrate(result.env as Env & { DATABASE_URL: string }, io);
   }
   const owner = reserved[command];
   if (owner) {
@@ -45,6 +54,33 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number | 
   io.stderr(`unknown command "${command}"`);
   io.stderr(usage);
   return 1;
+}
+
+// MIRROR-R5: exit 0 once every migration is applied, 1 on any failure; safe to run again.
+async function runMigrate(env: Env & { DATABASE_URL: string }, io: CliIo): Promise<number> {
+  try {
+    const { applied } = await io.migrate(env);
+    io.stdout(
+      applied.length === 0
+        ? "migrate: the database is up to date"
+        : `migrate: applied ${applied.length} migration${applied.length === 1 ? "" : "s"}: ` +
+            applied.join(", "),
+    );
+    return 0;
+  } catch (error) {
+    io.stderr(`migrate failed: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+}
+
+/** Applies the migrations bundled into this build over one connection. */
+async function migrateDatabase(env: Env & { DATABASE_URL: string }): Promise<MigrateResult> {
+  const sql = createSql(env.DATABASE_URL, { max: 1 });
+  try {
+    return await migrate(sql, migrations);
+  } finally {
+    await sql.end({ timeout: 5 });
+  }
 }
 
 /** Serves the production build that sits next to this file in dist/. */
@@ -58,6 +94,10 @@ async function serveBuild(env: Env): Promise<void> {
     silent: true,
     gracefulShutdown: true,
   });
+  // The server bundle opens the database pool on first use; close it so the process exits.
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => void closeDatabase());
+  }
   console.log(
     `linear.sesv.co ${buildInfo.version} (${shortCommit(buildInfo.commit)}) listening on ` +
       `${server.url}, public at ${env.PUBLIC_URL}`,
@@ -70,6 +110,7 @@ if (import.meta.main) {
     stdout: (line) => console.log(line),
     stderr: (line) => console.error(line),
     serve: serveBuild,
+    migrate: migrateDatabase,
   });
   if (code !== undefined) process.exitCode = code;
 }

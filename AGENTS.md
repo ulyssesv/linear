@@ -26,6 +26,11 @@ flows from Linear into files automatically.
 - `docs/specs/NNN-slug.md`: what to build, with requirement ids that tests cite. Format in `docs/specs/README.md`.
 - `docs/records/NNN-slug.md`: decisions. Format in `docs/records/README.md`.
 - `apps/web`: the single deployable. `packages/`: code shared by applications. `tools/`: repository tooling.
+- `apps/web/src/server/db`: Postgres access (`database()`, `createSql()`) and the
+  migration runner. Migrations are `migrations/NNNN_slug.sql`, applied in order by the
+  image's `migrate` command; add the next number, never edit a released one.
+- `compose.yaml`: the local Postgres, also started by CI. Tests and the dev server use it
+  unless `DATABASE_URL` says otherwise.
 - `docs/deploy.md`: the hand-off to infra: image, port, probes, env contract, security context.
 - `.github/workflows/`: `ci.yml`, `release.yml`, `smoke.yml`, `linear-sync.yml`.
   `.github/actions/setup`: Node, pnpm and dependencies for every workflow that runs pnpm.
@@ -98,8 +103,9 @@ activated in the shell, `mise install` sets both up; `packageManager` and `engin
 `package.json` agree with it, and pnpm switches itself to `packageManager` regardless.
 Workflows set up through `.github/actions/setup`, which installs the same versions with
 mise. The Dockerfile pins Node by its base image and gets pnpm through corepack. Bump a
-version in all of those places, then run `mise lock`. Keep this table current when a
-script is added or changes.
+version in all of those places, then run `mise lock`. Postgres is pinned by tag and
+digest in `compose.yaml` only; CI and the container smoke take the image from there.
+Docker runs it locally. Keep this table current when a script is added or changes.
 
 | Command | What |
 |---|---|
@@ -110,14 +116,16 @@ script is added or changes.
 | `pnpm lint` | Biome lint and format check (`biome ci`); Markdown is excluded |
 | `pnpm format` | Apply Biome fixes and formatting |
 | `pnpm typecheck` | `tsc` in every package |
-| `pnpm test` | Unit tests (Vitest) in every package |
+| `pnpm db:up` | Start the Postgres from `compose.yaml` on `localhost:55432` and wait until it is ready |
+| `pnpm db:down` | Stop it, keeping the data; `docker compose down --volumes` also drops the data |
+| `pnpm test` | Unit tests (Vitest) in every package; tests that touch Postgres need `pnpm db:up` and fail without it |
 | `pnpm check:specs` | Spec and record structure, task coverage, requirement traceability |
 | `pnpm dev` | Web app with Vite at http://localhost:3000 |
 | `pnpm build` | Production build into `apps/web/dist`; `APP_VERSION` and `APP_COMMIT` set the build info |
-| `node apps/web/dist/cli.mjs [serve]` | Run the build; `PORT` and `PUBLIC_URL` per `docs/deploy.md` |
-| `pnpm test:e2e` | Playwright `local` project against the built server on port 3100; run `pnpm build` first |
+| `node apps/web/dist/cli.mjs [serve\|migrate]` | Run the build; `DATABASE_URL`, `PORT` and `PUBLIC_URL` per `docs/deploy.md` |
+| `pnpm test:e2e` | Playwright `local` project: migrates, then runs the built server on port 3100 (`E2E_PORT` overrides); run `pnpm build` and `pnpm db:up` first |
 | `pnpm test:smoke` | Playwright `smoke` project against `BASE_URL`, asserting `EXPECTED_COMMIT` when set |
-| `pnpm smoke:container <image>` | Run an image under the production security flags and check `/healthz` and the reserved commands |
+| `pnpm smoke:container <image>` | Run an image under the production security flags against a throwaway Postgres: `migrate`, `/healthz`, `/readyz`, `scheduler` |
 | `pnpm linear:sync [--dry-run]` | Mirror specs and records to Linear documents; `--dry-run` prints the plan and writes nothing |
 | `pnpm seed:fixtures [--dry-run]` | Seed the planning sheet fixtures under the `Test` team hierarchy with a personal `LINEAR_API_KEY`; idempotent, never deletes; `--dry-run` prints the plan and writes nothing; `--help` for options |
 

@@ -52,13 +52,22 @@ jobs:
       - name: Node and pnpm from mise.toml, then install (SEED-R1, SEED-R2)
         uses: ./.github/actions/setup
 
+      # Started from compose.yaml rather than as a job service: services cannot pass
+      # `-c wal_level=logical`, and one file keeps CI and local runs on the same Postgres.
+      # Unit and end-to-end tests fall back to its URL (apps/web/src/server/db/local.ts).
+      - name: Database service from compose.yaml with logical replication (MIRROR-R8)
+        run: |
+          docker compose up --detach --wait postgres
+          wal_level=$(docker compose exec -T postgres psql -U linear -d linear -tAc 'show wal_level')
+          [[ $wal_level == logical ]] || { echo "::error::wal_level is '$wal_level', want logical"; exit 1; }
+
       - name: Lint (SEED-R3)
         run: pnpm lint
 
       - name: Typecheck (SEED-R4)
         run: pnpm typecheck
 
-      - name: Unit tests (SEED-R25)
+      - name: Unit tests against the database service (SEED-R25, MIRROR-R8)
         run: pnpm test
 
       - name: Spec checks (SEED-R8, SEED-R9, SEED-R30)
@@ -73,7 +82,7 @@ jobs:
       - name: Install Playwright Chromium (SEED-R25)
         run: pnpm --filter @sesv/web exec playwright install --with-deps chromium
 
-      - name: End-to-end tests against the built server (SEED-R17, SEED-R20, SEED-R25)
+      - name: End-to-end tests against the built server and the database service (SEED-R17, SEED-R20, SEED-R25, MIRROR-R5, MIRROR-R6, MIRROR-R8)
         run: pnpm test:e2e
 
       - name: Docker build (SEED-R23)
@@ -86,7 +95,7 @@ jobs:
           --tag linear-web:ci
           .
 
-      - name: Container smoke (SEED-R23, SEED-R24)
+      - name: Container smoke with migrate and scheduler against a throwaway database (SEED-R23, SEED-R24, MIRROR-R30)
         env:
           EXPECTED_VERSION: ci
           EXPECTED_COMMIT: ${{ github.sha }}
