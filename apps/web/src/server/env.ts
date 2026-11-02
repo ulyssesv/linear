@@ -93,6 +93,7 @@ const variables = {
   SESSION_SECRET: { kind: "required", parse: secret },
   TOKEN_ENCRYPTION_KEY: { kind: "required", parse: aes256Key },
   SIGNIN_ALLOWLIST: { kind: "optional", parse: emailList },
+  LINEAR_API_URL: { kind: "optional", parse: origin },
 } satisfies Record<string, Variable<unknown>>;
 
 /** The full, validated environment. Each command sees the subset it declares. */
@@ -111,10 +112,14 @@ export type FullEnv = {
   LINEAR_WEBHOOK_SECRET: string;
   /** Signs session cookies, at least 32 characters. Secret. */
   SESSION_SECRET: string;
-  /** AES-256 key for per-user Linear tokens at rest, 32 bytes in standard base64. Secret. */
+  /** AES-256 key for Linear tokens at rest (per-user tokens and the app token), 32 bytes in
+   * standard base64. Secret. */
   TOKEN_ENCRYPTION_KEY: string;
   /** Lowercased emails allowed to sign in; unset lets every workspace member in. */
   SIGNIN_ALLOWLIST?: string[];
+  /** Origin of Linear's API, for tests and the container smoke's stub only; unset in
+   * production, where the server talks to https://api.linear.app. */
+  LINEAR_API_URL?: string;
 };
 
 /** What each command of the image needs; nothing more is validated for it. */
@@ -131,7 +136,13 @@ export const commandEnv = {
     "SIGNIN_ALLOWLIST",
   ],
   migrate: ["DATABASE_URL"],
-  scheduler: ["DATABASE_URL", "LINEAR_CLIENT_ID", "LINEAR_CLIENT_SECRET"],
+  scheduler: [
+    "DATABASE_URL",
+    "LINEAR_CLIENT_ID",
+    "LINEAR_CLIENT_SECRET",
+    "TOKEN_ENCRYPTION_KEY",
+    "LINEAR_API_URL",
+  ],
 } as const satisfies Record<string, readonly (keyof typeof variables)[]>;
 
 export type Command = keyof typeof commandEnv;

@@ -11,7 +11,8 @@
 //
 // Neither the client secret nor a token ever appears in an error message.
 
-export const linearTokenUrl = "https://api.linear.app/oauth/token";
+export const linearApiOrigin = "https://api.linear.app";
+export const linearTokenUrl = `${linearApiOrigin}/oauth/token`;
 
 /** Requested on every token. Never change one without the other: a different scope set
  * revokes the app's existing tokens. `write` is unused in P1 and avoids re-consent in P2. */
@@ -45,6 +46,9 @@ export type AppTokenProviderOptions = {
   /** Renew this long before expiry; capped at half the token's lifetime. Default one hour. */
   refreshMarginMs?: number;
   store?: AppTokenStore;
+  /** Origin of Linear's API. Tests and the container smoke point it at a stub; production
+   * never sets it (LINEAR_API_URL in docs/deploy.md). */
+  apiUrl?: string;
 };
 
 export class LinearTokenError extends Error {
@@ -57,6 +61,7 @@ export function createAppTokenProvider(options: AppTokenProviderOptions): AppTok
   const fetch = options.fetch ?? globalThis.fetch;
   const now = options.now ?? Date.now;
   const marginMs = options.refreshMarginMs ?? hour;
+  const tokenUrl = options.apiUrl ? `${options.apiUrl}/oauth/token` : linearTokenUrl;
   const basic = Buffer.from(`${options.clientId}:${options.clientSecret}`).toString("base64");
   const redact = (text: string) =>
     text.replaceAll(options.clientSecret, "[redacted]").replaceAll(basic, "[redacted]");
@@ -77,7 +82,7 @@ export function createAppTokenProvider(options: AppTokenProviderOptions): AppTok
       new LinearTokenError(redact(`Linear token request failed: ${detail}`));
     let response: Response;
     try {
-      response = await fetch(linearTokenUrl, {
+      response = await fetch(tokenUrl, {
         method: "POST",
         headers: {
           authorization: `Basic ${basic}`,
@@ -90,7 +95,11 @@ export function createAppTokenProvider(options: AppTokenProviderOptions): AppTok
         }).toString(),
       });
     } catch (error) {
-      throw fail(error instanceof Error ? error.message : "network error");
+      // fetch says only "fetch failed"; the cause names the network error.
+      const cause =
+        error instanceof Error ? (error.cause as { code?: unknown } | undefined) : undefined;
+      const detail = error instanceof Error ? error.message : "network error";
+      throw fail(typeof cause?.code === "string" ? `${detail} (${cause.code})` : detail);
     }
     const body = (await response.json().catch(() => undefined)) as
       | Record<string, unknown>
