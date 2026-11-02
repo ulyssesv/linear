@@ -5,7 +5,7 @@ import { site } from "@/site";
 export const disclaimer = "An independent project, not affiliated with or endorsed by Linear.";
 
 // Footer shared by every page: the disclaimer next to the repository link and the deployed
-// build (SEED-R17, SEED-R21, CONTENT-R17).
+// build (SEED-R21, CONTENT-R17).
 export function SiteFooter() {
   return (
     <footer className="border-t">

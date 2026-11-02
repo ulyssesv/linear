@@ -1,8 +1,15 @@
 import type { ReactNode } from "react";
 import { ArrowRightIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
+import { Badge } from "@/components/ui/badge";
 import { useViewer } from "@/components/viewer";
-import type { ContentMeta, MDXComponents, MDXContent } from "@/lib/content";
+import {
+  type ContentMeta,
+  type InitiativeStatus,
+  isInitiativeMeta,
+  type MDXComponents,
+  type MDXContent,
+} from "@/lib/content";
 import { site } from "@/site";
 
 // The layout and components of content pages (CONTENT-R8, CONTENT-R9). Copy lives in
@@ -61,7 +68,20 @@ export function Callout({ title, children }: Readonly<{ title?: string; children
 /** The fixed set of site components content files can use (CONTENT-R9). */
 export const contentComponents = { DemoLink, Callout } satisfies MDXComponents;
 
-/** One content page: the title from `meta`, then the file in the shared prose style. */
+/** An initiative's status label, shown under its page title (CONTENT-R12). */
+export function StatusLabel({ status }: Readonly<{ status: InitiativeStatus }>) {
+  return (
+    <p data-status className="not-prose">
+      <span className="sr-only">Status: </span>
+      <Badge variant="secondary">{status}</Badge>
+    </p>
+  );
+}
+
+/**
+ * One content page: the title from `meta`, the status label when `meta` is an
+ * initiative's (CONTENT-R12), then the file in the shared prose style.
+ */
 export function ContentPage({
   meta,
   Content,
@@ -70,6 +90,7 @@ export function ContentPage({
     <PageContainer>
       <article className="prose">
         <h1>{meta.title}</h1>
+        {isInitiativeMeta(meta) ? <StatusLabel status={meta.status} /> : null}
         <Content components={contentComponents} />
       </article>
     </PageContainer>

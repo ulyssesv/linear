@@ -25,3 +25,15 @@ export function missingMeta(meta: unknown): string[] {
     (key) => typeof record[key] !== "string" || (record[key] as string).trim() === "",
   );
 }
+
+/** The status label of an initiative page, changed by hand in its `meta` (CONTENT-R12). */
+export const initiativeStatuses = ["Planned", "In progress", "Live"] as const;
+export type InitiativeStatus = (typeof initiativeStatuses)[number];
+
+/** The `meta` of an initiative page: a content page with a status label (CONTENT-R12). */
+export type InitiativeMeta = ContentMeta & { status: InitiativeStatus };
+
+/** Whether `meta` carries a known initiative status. */
+export function isInitiativeMeta(meta: ContentMeta): meta is InitiativeMeta {
+  return initiativeStatuses.includes(meta.status as InitiativeStatus);
+}

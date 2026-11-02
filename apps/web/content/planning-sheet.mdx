@@ -4,20 +4,55 @@ export const meta = {
   status: "In progress",
 };
 
-<Callout title="Placeholder">
-  First-draft copy for the site shell. CONTENT T4 writes this page from SPEC-002, REC-004
-  and REC-005.
-</Callout>
-
 ## Problem
 
-Planning across many initiatives and projects means opening them one at a time.
+Managers who plan by the quarter often still do it in a spreadsheet. They export
+projects and initiatives, arrange and annotate them in rows and columns, compare
+options, and then copy the result back into Linear by hand.
+
+The export is detached from the moment it is made. Changes in Linear do not reach the
+sheet, edits in the sheet do not reach Linear, and the notes and extra columns added in
+the sheet stay in the sheet.
 
 ## Proposal
 
-A spreadsheet-like surface over Linear initiatives and projects, kept in sync with the
-workspace.
+A grid that behaves like a spreadsheet, whose rows are real Linear projects and
+initiatives. Keyboard navigation, paste, fill, free columns and, later, formulas work as
+they do in a spreadsheet. Linked values such as status, lead, dates and priority stay
+Linear's, and edits to them go back to Linear under the name of the person who made
+them.
+
+The question it tests is whether a planning team arranges, annotates and compares plans
+faster this way than with a plain export or with Linear's own views, without giving up
+Linear as the source of truth.
+
+The work is split into four projects, each shipped here and checkable by hand:
+
+1. Workspace mirror and read-only sheet. A copy of the workspace's public-team projects
+   and initiatives, kept current by webhooks and a scheduled reconcile, with sign in with
+   Linear and two read-only sheets.
+2. Sheet document and commit to Linear. Sheets saved as documents, staged edits, a
+   commit that writes each change under its author's name, and draft rows.
+3. Live multi-user editing. Several people in one sheet, with cell-level conflicts,
+   history and undo.
+4. Formulas and snapshots. Formula columns, and snapshots that can be compared and
+   applied.
+
+The first project is under way. The grid is Handsontable behind an adapter module, so it
+can be replaced without touching the rest (REC-004). The server reads the workspace with
+a Linear OAuth app's own credentials, scoped by Linear to public teams, and the same app
+signs people in (REC-005).
 
 ## Demo
 
 <DemoLink href="/sheets">Open the planning sheet</DemoLink>
+
+Sign-in is open to members of the workspace the app is installed in, optionally narrowed
+by an allowlist. The demo shows what the first project has built so far.
+
+## Links
+
+- [Planning sheet initiative in Linear](https://linear.app/sesv/initiative/planning-sheet-7f1a80410512)
+- [SPEC-002 Workspace mirror and read-only sheet](https://github.com/ulyssesv/linear/blob/main/docs/specs/002-planning-sheet-mirror.md)
+- [REC-004 Grid is Handsontable behind an adapter, under the non-commercial license](https://github.com/ulyssesv/linear/blob/main/docs/records/004-grid-handsontable-behind-an-adapter.md)
+- [REC-005 Linear identities are the OAuth app's client credentials for the mirror and sign in with Linear for users](https://github.com/ulyssesv/linear/blob/main/docs/records/005-linear-identities-and-login.md)
