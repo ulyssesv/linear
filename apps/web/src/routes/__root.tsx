@@ -1,9 +1,25 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { NotFound } from "@/components/not-found";
+import { SiteHeader } from "@/components/site-header";
+import { getSessionUser } from "@/server/auth/functions";
+import type { SessionUser } from "@/server/auth/sessions";
 import styles from "../styles.css?url";
 
+type AuthContext = { status: "ok" | "unavailable"; user: SessionUser | null };
+
 export const Route = createRootRoute({
+  // Who is signed in, for the header and the sheet guard (MIRROR-R15). Without a session
+  // cookie this answers null without touching the database, so public pages never depend
+  // on it; when the session store fails, public pages render signed out and the sheet
+  // guard refuses.
+  beforeLoad: async (): Promise<{ auth: AuthContext }> => {
+    try {
+      return { auth: { status: "ok", user: await getSessionUser() } };
+    } catch {
+      return { auth: { status: "unavailable", user: null } };
+    }
+  },
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -22,8 +38,10 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  const { auth } = Route.useRouteContext();
   return (
     <RootDocument>
+      <SiteHeader user={auth.user} />
       <Outlet />
     </RootDocument>
   );
