@@ -252,9 +252,13 @@ describe("bootstrap", () => {
 
     const gone = workspace.projects.splice(1, 1); // p2
     workspace.projectLabels = workspace.projectLabels.filter((l) => l.id !== "plabel-bet");
+    // A type Linear now returns empty for: every row of it is flagged.
+    workspace.initiativeLabels = [];
     const second = await run(workspace).result;
     expect(second.counts.projects.removed).toBe(1);
     expect(second.counts.projectLabels.removed).toBe(1);
+    expect(second.counts.initiativeLabels.removed).toBe(3);
+    expect(await listMirrored(sql, "initiativeLabels")).toEqual([]);
 
     expect(ids(await listMirrored(sql, "projects"))).toEqual(["p1", "p3"]);
     const all = await listMirrored(sql, "projects", { includeRemoved: true });
