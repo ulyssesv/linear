@@ -14,9 +14,13 @@
 export const linearApiOrigin = "https://api.linear.app";
 export const linearTokenUrl = `${linearApiOrigin}/oauth/token`;
 
-/** Requested on every token. Never change one without the other: a different scope set
- * revokes the app's existing tokens. `write` is unused in P1 and avoids re-consent in P2. */
-export const linearAppScopes = ["read", "write"] as const;
+/** Requested on every token. Linear serves initiatives and initiative labels to an app
+ * actor only with `initiative:read` (or `initiative:write`); `read` alone is refused with
+ * HTTP 400. `write` is unused in P1. A different scope set revokes the app's existing
+ * tokens; the database store keys a saved token by this set, so a change here replaces the
+ * saved token on the next run instead of reusing one Linear has revoked or that lacks a
+ * scope. */
+export const linearAppScopes = ["read", "write", "initiative:read"] as const;
 
 export type AppToken = {
   accessToken: string;
