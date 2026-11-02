@@ -31,7 +31,7 @@ out. The image carries no secrets and no environment-specific configuration.
 | `migrate` | Applies the pending schema migrations and exits 0, or non-zero on any failure. Run it as a Job before each rollout (see [Database](#database)) |
 | `scheduler` | Runs one sync pass of the workspace mirror and exits 0, or non-zero on any failure. Run it as a CronJob (see [Scheduler](#scheduler)) |
 | Shutdown | Graceful on `SIGTERM` |
-| Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL`; one JSON line per `scheduler` pass; one JSON line per sign-in (`{"event":"auth.sign_in","outcome":"accepted\|refused\|failed",...}`) and sign-out, naming the Linear user id, never a token, code or email |
+| Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL`; one JSON line per webhook delivery (`{"event":"linear-webhook",...}`) and per `scheduler` pass (`{"event":"scheduler",...}`), see [Reading the logs](#reading-the-logs); one JSON line per sign-in (`{"event":"auth.sign_in","outcome":"accepted\|refused\|failed",...}`) and sign-out, naming the Linear user id, never a token, code or email |
 
 ## Probes
 
@@ -137,9 +137,11 @@ body, the headers or the secret. A run of `unauthorized` lines means
 skew.
 
 The server talks to `https://api.linear.app` (token, revoke and GraphQL endpoints) over
-HTTPS, so egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the fixture
-workspace costs about 13 requests and 26,000 complexity points of the hourly 5,000 and
-2,000,000; a reconcile pass about 10 requests and 8,000 points.
+HTTPS, so egress must allow it. Calls back off on Linear's rate limits. Measured on the
+fixture workspace (about 330 projects) on 2026-11-02: a bootstrap costs 14 requests and
+about 11,000 complexity points of the hourly 5,000 requests and 2,000,000 points; a
+reconcile pass 10 requests and about 6,000 points, so a pass every 10 minutes uses about
+1% of either budget.
 
 ## Sign-in and sessions
 
@@ -241,8 +243,8 @@ spec:
               valueFrom: { secretKeyRef: { name: linear, key: DATABASE_URL } }
           # securityContext, the /tmp volume and its mount as in "Security context" below
           resources:
-            requests: { cpu: 10m, memory: 64Mi }
-            limits: { memory: 128Mi }
+            requests: { cpu: 10m, memory: 96Mi }
+            limits: { memory: 192Mi }
 ```
 
 Migrations are written so the previous release still runs against the new schema
@@ -325,14 +327,55 @@ spec:
                   valueFrom: { secretKeyRef: { name: linear, key: TOKEN_ENCRYPTION_KEY } }
               # securityContext, the /tmp volume and its mount as in "Security context" below
               resources:
-                requests: { cpu: 20m, memory: 96Mi }
-                limits: { memory: 192Mi }
+                requests: { cpu: 20m, memory: 128Mi }
+                limits: { memory: 256Mi }
 ```
 
 `backoffLimit: 0` because the next scheduled run is the retry; `activeDeadlineSeconds`
 keeps a run that waits on Linear's rate limit from overlapping the next one by much. The
 `migrate` Job must have run first: a pass against a database without the mirror tables
 fails. Egress to `https://api.linear.app` is needed, as for `serve`.
+
+## Reading the logs
+
+The mirror has two feeders, and each leaves one JSON line per unit of work with its
+outcome and counts (MIRROR-R31): `serve` one `linear-webhook` line per delivery, the
+`scheduler` CronJob one `scheduler` line per pass. Neither line carries a body, a header,
+a token or a secret.
+
+`linear-webhook` outcomes, with the HTTP status Linear sees:
+
+| `outcome` | Status | Meaning | What to do |
+|---|---|---|---|
+| `applied` | 200 | Written to the mirror; `counts` says how | Nothing |
+| `dropped` | 200 | Belongs only to a private team, so never stored (MIRROR-R12) | Nothing |
+| `ignored` | 200 | A type or action the mirror does not follow | Nothing |
+| `duplicate` | 200 | A delivery id already applied: Linear's retry or a replay | Nothing |
+| `unauthorized` | 401 | The signature does not match | `LINEAR_WEBHOOK_SECRET` differs from the app's signing secret |
+| `stale` | 401 | Signed more than 60 seconds away from the pod's clock | Node clock skew; check NTP |
+| `invalid`, `too-large` | 400, 405, 413 | Not a webhook delivery Linear would send | Nothing, unless they come from Linear |
+| `misconfigured` | 500 | No signing secret, or the database client could not start | The `error` field says which |
+| `timeout`, `failed` | 500 | The database did not finish in time, or failed; nothing was written | The database; Linear retries after 1 minute, 1 hour and 6 hours |
+
+`scheduler` outcomes: `ok` with `source`, `changed`, per-type `counts` and the Linear
+cost; `skipped` when another pass held the lock; `failed`, on stderr and exit 1, with the
+`error`. Each pass, and each delivery that reaches the database, also leaves a row with
+the same outcome and counts in the `mirror_sync_log` table.
+
+Why the mirror is stale, from the logs alone:
+
+- No `linear-webhook` lines at all after changes in Linear: the webhook is disabled or
+  missing in the OAuth app, or the ingress does not route `POST /webhooks/linear`. Linear
+  disables a webhook that keeps failing.
+- `unauthorized`, `stale`, `timeout` or `failed` lines: the table above.
+- `applied` lines but the sheet does not show the change: the row is out of scope
+  (`dropped` in `counts`), or the change was to a field the sheet does not show.
+- No `scheduler` lines, or only `failed` ones: the CronJob is suspended, cannot pull the
+  image, or each pass fails for the reason in `error`. Until a pass succeeds, the mirror
+  is only as fresh as the webhooks keep it.
+- `scheduler` lines with `"outcome":"ok"` and `"changed":0` while Linear shows a change
+  older than the window: the change is to an entity of a private team, or to a type the
+  mirror does not hold.
 
 ## Security context
 
@@ -367,18 +410,36 @@ with the image's own Node) through `LINEAR_API_URL`, so the smoke needs no crede
 
 ## Resources
 
-Measured locally on the seed image: about 40 MiB resident after start and a few
-landing-page requests, near-zero CPU at idle. Suggested starting point for one replica:
+Measured on 2026-11-02 with the built server (Node 26, macOS arm64; Linux resident sizes
+are similar) against a mirror of about 330 projects, peak resident memory:
+
+| Process | Peak | Measured while |
+|---|---|---|
+| `serve` | about 90 MiB | idle after start, the database pool open |
+| `serve` | about 180 MiB | one user loading a projects sheet of 630 rows, six times in a row |
+| `serve` | about 320 MiB | four users loading sheets of 1,500 rows at once |
+| `scheduler` | about 95 MiB | a bootstrap, 434 rows written in 2.4 seconds; a reconcile peaks near 85 MiB |
+| `migrate` | about 75 MiB | applying every migration to an empty database |
+
+A sheet's data is built in memory for each request, so memory follows concurrent sheet
+loads, not the number of signed-in users. Suggested starting point for one `serve`
+replica:
 
 ```yaml
 resources:
-  requests: { cpu: 50m, memory: 128Mi }
-  limits: { memory: 256Mi }
+  requests: { cpu: 50m, memory: 256Mi }
+  limits: { memory: 512Mi }
 ```
 
-No CPU limit, to avoid throttling server rendering. Revisit when the planning sheet adds
-mirror and Electric traffic. The `migrate` Job's hints are in [Migrations](#migrations),
-the `scheduler` CronJob's in [Scheduler](#scheduler).
+No CPU limit, to avoid throttling server rendering; CPU stays near zero at idle and a
+sheet load costs tens of milliseconds. The `migrate` Job's hints are in
+[Migrations](#migrations), the `scheduler` CronJob's in [Scheduler](#scheduler). Revisit
+when planning sheet P3 adds Electric.
+
+Database: the mirror of about 330 projects and its reference data take about 2 MiB, the
+whole database about 10 MiB; it grows with the workspace, not with traffic. Connections:
+up to 10 per `serve` replica, 3 for `scheduler` and 1 for `migrate`, so with one replica
+14 at most; keep `max_connections` well above that for Electric in P3.
 
 The server does not compress responses. Please enable compression at the ingress
 (Traefik's `compress` middleware, gzip or brotli) for this host. It matters for the
@@ -390,9 +451,8 @@ sheets (MIRROR-R25): with three hundred projects the sheet's data is about 300 K
 Public hostname: `linear.sesv.co`, served over HTTPS by the cluster ingress. The site is
 public; `smoke.yml` checks it from GitHub-hosted runners.
 
-`linear.sesv.co` currently resolves to a private address: `dig +short linear.sesv.co`
-returned `10.0.10.53` on 2026-11-01. It must be repointed to the public ingress before
-the site is reachable from outside and before `smoke.yml` can pass.
+`dig +short linear.sesv.co` returned the public address `77.165.7.146` on 2026-11-02, and
+`/healthz` answered `0.1.0` from it.
 
 ## Verifying a rollout
 
@@ -400,3 +460,37 @@ Run the `smoke` workflow (Actions, smoke, Run workflow) with `base_url`
 `https://linear.sesv.co` and `expected_commit` set to the released commit. It runs the
 Playwright `smoke` project: landing page, `/healthz`, `/readyz`, and the served commit.
 Locally: `BASE_URL=https://linear.sesv.co EXPECTED_COMMIT=<sha> pnpm test:smoke`.
+
+### First rollout of the planning sheet
+
+The first release with the planning sheet (0.2.0) is the first to need a database,
+secrets and the Linear OAuth app. In order:
+
+1. **Database.** PostgreSQL 18 with `wal_level = logical` and a role as in
+   [Database](#database); its direct URL as the `DATABASE_URL` secret.
+2. **Linear OAuth app.** Created in Linear as in [Linear OAuth app](#linear-oauth-app):
+   callback and webhook URLs, the four webhook categories, client credentials enabled.
+   Its client id, client secret and webhook signing secret become secrets.
+3. **Secrets.** Every name in [Environment](#environment): `SESSION_SECRET` and
+   `TOKEN_ENCRYPTION_KEY` generated fresh, and `SIGNIN_ALLOWLIST` if sign-in should be
+   limited. `serve` will not start without them, so they exist before step 5.
+4. **Ingress.** The paths in [Sign-in and sessions](#sign-in-and-sessions) and
+   [Webhook endpoint](#webhook-endpoint) reach the pod unchanged, not cached or
+   buffered; compression on, as in [Resources](#resources).
+5. **Pin the image.** The values bump pins the release's `<tag>@sha256:...`, with the
+   `migrate` PreSync Job, the `scheduler` CronJob and the revised resources. Argo runs
+   `migrate` (`applied N migrations: ...` in its log), then rolls out `serve`.
+6. **First pass.** Run it now rather than waiting for the schedule:
+   `kubectl create job --from=cronjob/linear-scheduler linear-scheduler-first`. Its line
+   reads `"outcome":"ok","source":"bootstrap"`; the next scheduled ones read `reconcile`.
+7. **Smoke.** The `smoke` workflow as above, with the released commit.
+
+Then the author checks the planning sheet end to end (spec MIRROR, T10):
+
+- Sign in at `https://linear.sesv.co` and open the projects sheet.
+- Change a project in Linear: within ten seconds the row changes in the open sheet, and
+  `serve` logs a `linear-webhook` line with `"outcome":"applied"`.
+- Disable the webhook in the OAuth app, change another project, and wait for the next
+  scheduled pass: its `scheduler` line has `"changed"` of at least 1, and the row changes
+  in the open sheet. Enable the webhook again.
+- A project that belongs only to a private team never appears in either sheet.
