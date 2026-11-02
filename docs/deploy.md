@@ -50,29 +50,64 @@ will register the database.
 
 ## Environment
 
-The server validates its environment at startup and exits non-zero listing every
-missing or invalid variable.
+Each command validates the names it uses at startup and exits non-zero listing every
+missing or invalid one by name, never printing a value (MIRROR-R7). The list lives in
+`apps/web/src/server/env.ts`. New names arrive with the spec that uses them and are added
+here in the same pull request.
 
-Required, with defaults:
+| Name | Commands | Default | Format and meaning |
+|---|---|---|---|
+| `PORT` | `serve` | `3000` | Listen port, integer 1 to 65535 |
+| `PUBLIC_URL` | `serve` | `http://localhost:3000` | External origin, `http` or `https`, no path. Set to `https://linear.sesv.co`. Every absolute URL given to Linear derives from it, never from request headers |
+| `DATABASE_URL` | `serve`, `migrate`, `scheduler` | required | Postgres, `postgres://` or `postgresql://` with a host; direct and unpooled |
+| `LINEAR_CLIENT_ID` | `serve`, `scheduler` | required | Client id of the Linear OAuth app; no whitespace |
+| `LINEAR_CLIENT_SECRET` | `serve`, `scheduler` | required | Client secret of the Linear OAuth app; no whitespace. Rotating it revokes every app token; the server renews on the next call |
+| `LINEAR_WEBHOOK_SECRET` | `serve` | required | Signing secret of the OAuth app's webhook; no whitespace |
+| `SESSION_SECRET` | `serve` | required | Signs session cookies; at least 32 characters, e.g. `openssl rand -base64 32` |
+| `TOKEN_ENCRYPTION_KEY` | `serve` | required | AES-256 key for per-user Linear tokens at rest: exactly 32 bytes in standard base64 (44 characters), from `openssl rand -base64 32`. Changing it makes stored tokens unreadable, so users sign in again |
+| `SIGNIN_ALLOWLIST` | `serve` | unset | Optional. Comma-separated emails allowed to sign in, compared case-insensitively; blanks are ignored. Unset or blank lets every member of the workspace sign in |
 
-| Name | Default | Meaning |
-|---|---|---|
-| `PORT` | `3000` | Listen port, integer 1 to 65535 |
-| `PUBLIC_URL` | `http://localhost:3000` | External origin, `http` or `https`, no path. Set to `https://linear.sesv.co` |
+`migrate` and `scheduler` are still reserved in this release and exit 2 before reading
+their environment; the names above are what they will require once implemented.
+
+All required names except `PORT` and `PUBLIC_URL` are secrets. Infra holds them as sops
+secrets and injects them as environment variables; nothing else holds them, and the image
+carries none. The `serve` Deployment needs all of them; the `migrate` Job only
+`DATABASE_URL`; the `scheduler` CronJob `DATABASE_URL`, `LINEAR_CLIENT_ID` and
+`LINEAR_CLIENT_SECRET`. The first release with these names will not start `serve` until
+the secrets exist, so create them before pinning it.
 
 Reserved: accepted and passed through unvalidated, unused until the spec that needs them
 gives them a schema. Infra need not set them yet.
 
 | Name | Planned use |
 |---|---|
-| `DATABASE_URL` | Postgres, direct and unpooled |
-| `ELECTRIC_URL` | In-cluster Electric service |
+| `ELECTRIC_URL` | In-cluster Electric service (planning sheet P3) |
 | `ELECTRIC_SECRET` | Shared with Electric; the app attaches it, clients never see it |
-| `SESSION_SECRET` | Session signing |
-| `LINEAR_CLIENT_ID`, `LINEAR_CLIENT_SECRET` | Linear OAuth app |
 
-The list lives in `apps/web/src/server/env.ts`. New names arrive with the spec that uses
-them and are added here in the same pull request.
+## Linear OAuth app
+
+One Linear OAuth app in the workspace is the server's only Linear credential (REC-005). It
+is created and configured by hand in Linear (Settings, API, OAuth applications) and must
+match what the server sends:
+
+| Setting | Value |
+|---|---|
+| Callback URL (redirect URI) | `https://linear.sesv.co/auth/linear/callback`, that is `${PUBLIC_URL}/auth/linear/callback` |
+| Webhook URL | `https://linear.sesv.co/webhooks/linear`, that is `${PUBLIC_URL}/webhooks/linear` |
+| Webhook categories | Project, Project update, Initiative, Initiative update |
+| Client credentials | Enabled; the server requests a token with scopes `read,write` |
+| Scopes | `read` and `write` (`write` is unused until planning sheet P2) |
+
+The paths are fixed in `apps/web/src/server/linear/urls.ts`. Both must reach the pod
+through the ingress, the webhook path from Linear's servers on the public internet. For
+local development add `http://localhost:3000/auth/linear/callback` as a second callback
+URL; a webhook needs a public tunnel, whose origin then becomes `PUBLIC_URL`.
+
+The server talks to `https://api.linear.app` (token endpoint and GraphQL) over HTTPS, so
+egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the fixture
+workspace costs about 14 requests and 40,000 complexity points of the hourly 5,000 and
+2,000,000.
 
 ## Security context
 
