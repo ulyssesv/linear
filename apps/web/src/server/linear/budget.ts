@@ -9,31 +9,33 @@
 // rounded up per query. Linear charges the requested page size, not the rows returned,
 // so the estimate below is an upper bound for a page however full it is.
 //
-// The bootstrap (T3) pages through every entity type with the page sizes and selections
-// below. Its queries must not select more than these shapes; when a query grows, grow the
-// shape here and let the test check the budget again.
+// The bootstrap (../mirror/bootstrap.ts) pages through every entity type with the page
+// sizes and selections below. Its queries select exactly these shapes, which the budget
+// test checks; when a query grows, grow the shape here and let the test check the budget
+// again.
 //
 // Arithmetic for the fixture workspace (about 300 projects and 60 initiatives, MIRROR-R27,
 // plus the reference data), with the shapes below:
 //
-//   project node      1 + 16 x 0.1 + lead 1.1 + status 1.1 + lastUpdate 1.5
-//                     + 3 connections x 25 x (1 + 0.1)                      =  88.8
-//   projects page     50 x 88.8 + pageInfo 1.2, rounded up                  = 4,442
-//   initiative node   1 + 12 x 0.1 + owner 1.1 + lastUpdate 1.5
-//                     + projects 50 x 1.1 + labels 25 x 1.1 + teams 25 x 1.1 = 114.8
-//   initiatives page  50 x 114.8 + 1.2, rounded up                          = 5,742
-//   reference pages   100 x (1.8 to 2.9) + 1.2, rounded up                  = 182 to 292
+//   project node      1 + 17 x 0.1 + lead 1.1 + status 1.1 + lastUpdate 1.4
+//                     + teams, initiatives 2 x 25 x (1 + 0.1)               =  61.3
+//   projects page     50 x 61.3 + pageInfo 1.2, rounded up                  = 3,067
+//   initiative node   1 + 16 x 0.1 + owner 1.1 + leadTeam 1.1 + lastUpdate 1.4
+//                     + projects 50 x 1.1                                   =  61.2
+//   initiatives page  50 x 61.2 + 1.2, rounded up                           = 3,062
+//   reference pages   100 x (1.7 to 3.9) + 1.2, rounded up                  = 172 to 392
 //
-//   projects          ceil(300 / 50) = 6 pages x 4,442                      = 26,652
-//   initiatives       ceil(60 / 50)  = 2 pages x 5,742                      = 11,484
-//   reference data    6 types, one page each at fixture sizes               =  1,402
-//   full bootstrap    14 requests                                           = 39,538
+//   projects          ceil(300 / 50) = 6 pages x 3,067                      = 18,402
+//   initiatives       ceil(60 / 50)  = 2 pages x 3,062                      =  6,124
+//   reference data    5 types, one page each at fixture sizes               =  1,310
+//   full bootstrap    13 requests                                           = 25,836
 //
-// That is 0.3% of the hourly requests and 2% of the hourly complexity, and the largest
-// query (an initiatives page) is 57% of the single-query cap. A workspace ten times the
+// That is 0.3% of the hourly requests and 1.3% of the hourly complexity, and the largest
+// query (a projects page) is 31% of the single-query cap. A workspace ten times the
 // fixture stays under 20% of the complexity budget, so a re-run (MIRROR-R10) or a
-// reconcile in the same hour has room. Nested connections are capped at 25 or 50 entries;
-// an entity with more (a project in over 25 teams) needs its own follow-up page.
+// reconcile in the same hour has room. Labels come as the scalar `labelIds`, not a
+// connection. Nested connections are capped at 25 or 50 entries; an entity with more (a
+// project in over 25 teams) is truncated there and needs its own follow-up page.
 
 export const appActorHourlyBudget = {
   requests: 5_000,
@@ -69,49 +71,49 @@ export function pageComplexity(pageSize: number, node: Selection): number {
 }
 
 const id: Selection = { fields: 1 };
-const latestUpdate: Selection = { fields: 5 }; // id, body, health, createdAt, updatedAt
+const latestUpdate: Selection = { fields: 4 }; // id, body, health, createdAt
 
 export type EntityPlan = { pageSize: number; node: Selection };
 
-/** Page sizes and selections of the bootstrap, one entry per entity type (MIRROR-R9). */
+/**
+ * Page sizes and selections of the bootstrap, one entry per listed entity type
+ * (MIRROR-R9). The query texts are in ../mirror/listing.ts; the budget test parses them
+ * and checks they select exactly these shapes. Initiative statuses are a fixed enum in
+ * Linear's schema and cost no request.
+ */
 export const bootstrapPlan = {
-  // id name slugId url startDate targetDate priority health progress state
-  // createdAt updatedAt archivedAt completedAt canceledAt sortOrder
+  // id name slugId identifier url startDate targetDate priority health progress
+  // createdAt updatedAt archivedAt completedAt canceledAt trashed labelIds
   projects: {
     pageSize: 50,
     node: {
-      fields: 16,
+      fields: 17,
       objects: [id, id, latestUpdate], // lead, status, lastUpdate
       connections: [
         { first: 25, node: id }, // teams
         { first: 25, node: id }, // initiatives
-        { first: 25, node: id }, // labels
       ],
     },
   },
-  // id name slugId url targetDate priority health status createdAt updatedAt archivedAt
-  // completedAt
+  // id name slugId identifier url status targetDate priority health createdAt updatedAt
+  // archivedAt completedAt trashed visibility labelIds
   initiatives: {
     pageSize: 50,
     node: {
-      fields: 12,
-      objects: [id, latestUpdate], // owner, lastUpdate
-      connections: [
-        { first: 50, node: id }, // projects
-        { first: 25, node: id }, // labels
-        { first: 25, node: id }, // teams
-      ],
+      fields: 16,
+      objects: [id, id, latestUpdate], // owner, leadTeam, lastUpdate
+      connections: [{ first: 50, node: id }], // projects
     },
   },
-  // id name key private archivedAt updatedAt createdAt displayName, parent
-  teams: { pageSize: 100, node: { fields: 8, objects: [id] } },
+  // id name key displayName private archivedAt updatedAt, parent
+  teams: { pageSize: 100, node: { fields: 7, objects: [id] } },
   // id name displayName email avatarUrl active archivedAt updatedAt
   users: { pageSize: 100, node: { fields: 8 } },
-  // id name type color position archivedAt updatedAt createdAt
-  projectStatuses: { pageSize: 100, node: { fields: 8 } },
-  initiativeStatuses: { pageSize: 100, node: { fields: 8 } },
-  // id name color isGroup archivedAt updatedAt createdAt, parent
-  projectLabels: { pageSize: 100, node: { fields: 7, objects: [id] } },
+  // id name type color position archivedAt updatedAt
+  projectStatuses: { pageSize: 100, node: { fields: 7 } },
+  // id name color isGroup groupType archivedAt updatedAt, parent, team
+  projectLabels: { pageSize: 100, node: { fields: 7, objects: [id, id] } },
+  // id name color isGroup groupType archivedAt updatedAt, parent
   initiativeLabels: { pageSize: 100, node: { fields: 7, objects: [id] } },
 } satisfies Record<string, EntityPlan>;
 
