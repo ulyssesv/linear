@@ -33,6 +33,7 @@ import "handsontable/styles/ht-theme-main.min.css";
 import "./grid-theme.css";
 import { type CellShape, cellText, type SheetColumn, type SheetRow } from "../model.ts";
 import { cellContent } from "./cells.ts";
+import { type HeaderSortConfig, sortIntent } from "./sort-intent.ts";
 import type { GridProps } from "./types.ts";
 
 registerPlugin(ColumnSorting);
@@ -43,8 +44,6 @@ registerPlugin(ManualColumnResize);
 
 /** Sort from the header, cycling ascending, descending, none; the sheet does the sorting. */
 const columnSorting = { headerAction: true, indicator: true, sortEmptyCells: true };
-
-type SortConfig = { column: number; sortOrder: "asc" | "desc" };
 
 /** The vendor's non-commercial key; this site is a non-commercial demonstration (REC-004). */
 const licenseKey = "non-commercial-and-evaluation";
@@ -145,7 +144,7 @@ export default function HandsontableGrid({
     const instance = hot.current?.hotInstance;
     if (!instance || instance.isDestroyed) return;
     const physical = sort ? columns.findIndex((column) => column.id === sort.columnId) : -1;
-    const config: SortConfig[] =
+    const config: HeaderSortConfig[] =
       sort && physical >= 0
         ? [{ column: instance.toVisualColumn(physical), sortOrder: sort.direction }]
         : [];
@@ -154,14 +153,9 @@ export default function HandsontableGrid({
   });
 
   const beforeColumnSort = useCallback(
-    (current: SortConfig[], destination: SortConfig[]): boolean => {
-      const next = destination[0];
-      const previous = current[0];
-      const target = next ?? previous;
-      const columnId = target ? columnIdAt(target.column) : undefined;
-      if (columnId) {
-        intent.current?.({ type: "sort", columnId, direction: next ? next.sortOrder : null });
-      }
+    (current: HeaderSortConfig[], destination: HeaderSortConfig[]): boolean => {
+      const next = sortIntent(current, destination, columnIdAt);
+      if (next) intent.current?.(next);
       // The sheet orders the rows; the plugin's own sort would compare plain text.
       return false;
     },
