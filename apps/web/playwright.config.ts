@@ -45,7 +45,9 @@ export default defineConfig({
           PUBLIC_URL: `http://localhost:${port}`,
           DATABASE_URL: databaseUrl,
         },
-        reuseExistingServer: !process.env.CI,
+        // Never reuse: a server left on the port from another checkout would be tested in
+        // place of this build. A busy port fails the run; E2E_PORT moves it.
+        reuseExistingServer: false,
         stdout: "pipe",
         timeout: 30_000,
       },
