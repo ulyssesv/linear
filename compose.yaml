@@ -1,0 +1,33 @@
+# Local database for development and tests (MIRROR-R8). `pnpm db:up` starts it and waits
+# until it accepts connections; `pnpm db:down` stops it and keeps the data. CI starts the
+# same service from this file, so local runs and CI share one Postgres version and config.
+#
+# The URL is postgres://linear:linear@localhost:55432/linear, the default the dev server,
+# the unit tests and the end-to-end tests fall back to (apps/web/src/server/db/local.ts).
+# The host port is unusual on purpose, so a developer's own Postgres on 5432 is never used.
+# tools/container-smoke.sh runs this image too. Bump the tag and the digest together.
+name: linear-sesv
+
+services:
+  postgres:
+    image: postgres:18.6-trixie@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
+    # Logical replication from the start, as production (docs/deploy.md), for Electric in P3.
+    command: ["postgres", "-c", "wal_level=logical"]
+    environment:
+      POSTGRES_USER: linear
+      POSTGRES_PASSWORD: linear
+      POSTGRES_DB: linear
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      # Over TCP: during first initialisation the image runs a socket-only server.
+      test:
+        ["CMD", "pg_isready", "--host", "127.0.0.1", "--username", "linear", "--dbname", "linear"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  postgres:

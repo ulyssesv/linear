@@ -28,7 +28,8 @@ out. The image carries no secrets and no environment-specific configuration.
 | Port | `3000` (HTTP, plain; TLS ends at the proxy) |
 | Entrypoint | `node dist/cli.mjs <command>` in `/app` |
 | `serve` | Default command. Starts the web server |
-| `scheduler`, `migrate` | Reserved. Exit with code 2 and a message naming the spec that will implement them, so a Job or CronJob fails loudly until then |
+| `migrate` | Applies the pending schema migrations and exits 0, or non-zero on any failure. Run it as a Job before each rollout (see [Database](#database)) |
+| `scheduler` | Reserved. Exits with code 2 and a message naming the spec that will implement it, so a CronJob fails loudly until then |
 | Shutdown | Graceful on `SIGTERM` |
 | Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL` |
 
@@ -39,14 +40,15 @@ Both answer on the app port, with `cache-control: no-store`.
 | Probe | Path | Healthy | Unhealthy |
 |---|---|---|---|
 | Liveness | `/healthz` | 200 `{"status":"ok","version":"0.1.0","commit":"<sha>"}` | no answer |
-| Readiness | `/readyz` | 200 `{"status":"ok","checks":{...}}` | 503 `{"status":"fail","failing":["db"],"checks":{...}}` |
+| Readiness | `/readyz` | 200 `{"status":"ok","checks":{"database":{"status":"ok"}}}` | 503 `{"status":"fail","failing":["database"],"checks":{...}}` |
 
 `/healthz` answers whenever the process can serve requests and is also how the smoke
 workflow checks the deployed commit. `/readyz` runs every registered readiness check
 with a timeout; each entry in `checks` is `{"status":"ok"}` or
-`{"status":"fail","error":"..."}`. The current
-release registers none, so it always returns 200 with `"checks":{}`. The planning sheet
-will register the database.
+`{"status":"fail","error":"..."}`. The `database` check runs `select 1` against
+`DATABASE_URL`, so a pod is not ready while Postgres is unreachable. The liveness probe
+does not touch the database: a database outage takes pods out of the Service, it does
+not restart them.
 
 ## Environment
 
@@ -59,7 +61,7 @@ here in the same pull request.
 |---|---|---|---|
 | `PORT` | `serve` | `3000` | Listen port, integer 1 to 65535 |
 | `PUBLIC_URL` | `serve` | `http://localhost:3000` | External origin, `http` or `https`, no path. Set to `https://linear.sesv.co`. Every absolute URL given to Linear derives from it, never from request headers |
-| `DATABASE_URL` | `serve`, `migrate`, `scheduler` | required | Postgres, `postgres://` or `postgresql://` with a host; direct and unpooled |
+| `DATABASE_URL` | `serve`, `migrate`, `scheduler` | required | Postgres, `postgres://` or `postgresql://` URL with user, password, host, port and database; direct and unpooled (see [Database](#database)) |
 | `LINEAR_CLIENT_ID` | `serve`, `scheduler` | required | Client id of the Linear OAuth app; no whitespace |
 | `LINEAR_CLIENT_SECRET` | `serve`, `scheduler` | required | Client secret of the Linear OAuth app; no whitespace. Rotating it revokes every app token; the server renews on the next call |
 | `LINEAR_WEBHOOK_SECRET` | `serve` | required | Signing secret of the OAuth app's webhook; no whitespace |
@@ -67,8 +69,8 @@ here in the same pull request.
 | `TOKEN_ENCRYPTION_KEY` | `serve` | required | AES-256 key for per-user Linear tokens at rest: exactly 32 bytes in standard base64 (44 characters), from `openssl rand -base64 32`. Changing it makes stored tokens unreadable, so users sign in again |
 | `SIGNIN_ALLOWLIST` | `serve` | unset | Optional. Comma-separated emails allowed to sign in, compared case-insensitively; blanks are ignored. Unset or blank lets every member of the workspace sign in |
 
-`migrate` and `scheduler` are still reserved in this release and exit 2 before reading
-their environment; the names above are what they will require once implemented.
+`scheduler` is still reserved in this release and exits 2 before reading its
+environment; the names above are what it will require once implemented.
 
 All required names except `PORT` and `PUBLIC_URL` are secrets. Infra holds them as sops
 secrets and injects them as environment variables; nothing else holds them, and the image
@@ -109,6 +111,62 @@ egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the
 workspace costs about 14 requests and 40,000 complexity points of the hourly 5,000 and
 2,000,000.
 
+## Database
+
+The site needs one PostgreSQL database (MIRROR, planning sheet P1).
+
+| | |
+|---|---|
+| Version | PostgreSQL 18. CI and local development run `postgres:18.6`, pinned in `compose.yaml` |
+| Logical replication | On from the start: `wal_level = logical`. Unused until Electric arrives in P3, which then needs a role with `REPLICATION` and a few replication slots; setting it now avoids a restart and a database change later |
+| Connection | Direct to Postgres, not through PgBouncer or another transaction pooler: logical replication and session features need a real session. The server keeps a pool of at most 10 connections per replica; `migrate` uses one |
+| Role | Owns the database, or may create tables, indexes and types in its `public` schema. No superuser needed |
+| TLS | Add `sslmode` and friends to the URL as query parameters if the server requires them |
+
+### Migrations
+
+The image carries its migrations. `node dist/cli.mjs migrate` applies the pending ones
+in order, each in its own transaction, records them in the `schema_migrations` table,
+and exits 0; it exits non-zero, with the error on stderr, when the database cannot be
+reached or a migration fails, which leaves that migration fully rolled back. Running it
+again applies nothing new and exits 0. Concurrent runs wait on a Postgres advisory lock,
+so two Jobs at once are safe.
+
+Run it before each rollout as a Job with the same image reference, the same
+`DATABASE_URL` and the same security context as the Deployment, for example an Argo CD
+`PreSync` hook, and let a failed Job stop the sync:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: linear-migrate-
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 300
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/ulyssesv/linear:<tag>@sha256:<digest>
+          args: ["migrate"]
+          env:
+            - name: DATABASE_URL
+              valueFrom: { secretKeyRef: { name: linear, key: DATABASE_URL } }
+          # securityContext, the /tmp volume and its mount as in "Security context" below
+          resources:
+            requests: { cpu: 10m, memory: 64Mi }
+            limits: { memory: 128Mi }
+```
+
+Migrations are written so the previous release still runs against the new schema
+(expand first, contract in a later release): pods of the old release keep serving while
+the Job runs and until the rollout replaces them.
+
 ## Security context
 
 The image runs as uid and gid 10001, owns nothing under `/app`, and writes only to
@@ -135,7 +193,8 @@ volumes:
 
 CI and the release workflow run every image with the equivalent Docker flags
 (`--user 10001 --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs
-/tmp`) through `tools/container-smoke.sh` before it is published.
+/tmp`) through `tools/container-smoke.sh` before it is published, against a throwaway
+Postgres: `migrate` twice, `serve` with `/healthz` and `/readyz`, and `scheduler`.
 
 ## Resources
 
@@ -149,7 +208,7 @@ resources:
 ```
 
 No CPU limit, to avoid throttling server rendering. Revisit when the planning sheet adds
-Postgres and Electric traffic.
+mirror and Electric traffic. The `migrate` Job's hints are in [Migrations](#migrations).
 
 ## Hostname
 

@@ -95,7 +95,7 @@ jobs:
             --tag "$IMAGE:sha-$SHORT" \
             .
 
-      - name: Container smoke before pushing (SEED-R23, SEED-R24)
+      - name: Container smoke with a throwaway database before pushing (SEED-R23, SEED-R24, MIRROR-R30)
         run: EXPECTED_VERSION="$VERSION" EXPECTED_COMMIT="$COMMIT" bash tools/container-smoke.sh "$IMAGE:$TAG"
 
       - name: Push to GHCR (SEED-R26)

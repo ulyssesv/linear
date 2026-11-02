@@ -46,6 +46,45 @@ describe("environment schema", () => {
     expect(result).toMatchObject({ ok: true, env: { ELECTRIC_URL: "anything" } });
   });
 
+  it("MIRROR-R5 MIRROR-R6 accepts a postgres or postgresql DATABASE_URL", () => {
+    for (const url of [
+      "postgres://linear:secret@db.internal:5432/linear",
+      "postgresql://linear@localhost/linear?sslmode=disable",
+    ]) {
+      expect(parseEnvFor("migrate", { DATABASE_URL: url })).toMatchObject({
+        ok: true,
+        env: { DATABASE_URL: url },
+      });
+    }
+  });
+
+  it.each([["mysql://db/linear"], ["postgres:///linear"], ["not a url"], [""]])(
+    "MIRROR-R5 rejects DATABASE_URL=%j without echoing its value",
+    (url) => {
+      const result = parseEnvFor("migrate", { DATABASE_URL: url });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toEqual([expect.stringMatching(/^DATABASE_URL: /)]);
+      if (url) expect(result.errors[0]).not.toContain(url);
+    },
+  );
+
+  it("MIRROR-R5 MIRROR-R6 serve and migrate require DATABASE_URL", () => {
+    expect(parseEnvFor("migrate", {})).toEqual({
+      ok: false,
+      errors: ["DATABASE_URL: is required"],
+    });
+    const { DATABASE_URL: _, ...withoutDatabase } = complete;
+    expect(parseEnv(withoutDatabase)).toEqual({
+      ok: false,
+      errors: ["DATABASE_URL: is required"],
+    });
+  });
+
+  it("MIRROR-R5 DATABASE_URL is validated, no longer reserved", () => {
+    expect(reservedEnv).not.toContain("DATABASE_URL");
+  });
+
   it("SEED-R22 ignores names outside the contract", () => {
     expect(parseEnv({ ...complete, HOME: "/root", PATH: "/bin" })).toEqual({
       ok: true,

@@ -1,5 +1,6 @@
 // Readiness registry (SEED-R20). A check passes by resolving and fails by throwing or by not
-// answering within the timeout. The seed registers none; the planning sheet adds the database.
+// answering within the timeout. The process-wide registry checks the database (MIRROR-R6).
+import { database, ping } from "./db/client.ts";
 
 export type ReadinessCheck = () => void | Promise<void>;
 
@@ -55,6 +56,9 @@ export function createReadinessRegistry(): ReadinessRegistry {
 
 /** The process-wide registry that /readyz reports on. */
 export const readiness = createReadinessRegistry();
+
+// Not ready without the database: fails when DATABASE_URL is unset or Postgres does not answer.
+readiness.register("database", () => ping(database()));
 
 export function registerReadinessCheck(name: string, check: ReadinessCheck): void {
   readiness.register(name, check);
