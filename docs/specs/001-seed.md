@@ -1,7 +1,7 @@
 ---
 id: SEED
 title: Seed the repository, process, delivery pipeline and placeholder site
-status: implementing
+status: done
 area: site-platform
 linear:
   initiative: https://linear.app/sesv/initiative/site-platform-6ac5ff8c3199
