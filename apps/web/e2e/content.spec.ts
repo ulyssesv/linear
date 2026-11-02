@@ -177,3 +177,60 @@ test.describe("titles", () => {
     expect(titles.size).toBe(publicPaths.length + 1);
   });
 });
+
+test.describe("client-side navigation", () => {
+  /** Marks the current document; a full reload loses the mark. */
+  const mark = (page: Page) =>
+    page.evaluate(() => {
+      (window as unknown as { __document: string }).__document = "kept";
+    });
+  const marked = (page: Page) =>
+    page.evaluate(() => (window as unknown as { __document?: string }).__document);
+
+  test("CONTENT-R21 header links change the page without reloading the document", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await mark(page);
+    const nav = page.getByRole("banner").getByRole("navigation", { name: "Main" });
+    for (const item of navigation) {
+      await nav.getByRole("link", { name: item.label, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`${item.href}$`));
+      await expectHeader(page, item.href);
+      await expect(page.locator('meta[name="description"]')).toHaveCount(1);
+      expect(await marked(page)).toBe("kept");
+    }
+    await page.getByRole("link", { name: site.name, exact: true }).click();
+    await expect(page).toHaveURL(/\/$/);
+    expect(await marked(page)).toBe("kept");
+  });
+
+  test("CONTENT-R21 landing cards and links in the copy change the page in place", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await mark(page);
+    await page.locator('[data-initiative="ai-sdlc"] a').click();
+    await expect(page).toHaveURL(/\/ai-sdlc$/);
+    await expect(page).toHaveTitle(/AI SDLC/);
+    expect(await marked(page)).toBe("kept");
+    await page.goto("/this-site");
+    await mark(page);
+    await page.locator("article").getByRole("link", { name: "AI SDLC", exact: true }).click();
+    await expect(page).toHaveURL(/\/ai-sdlc$/);
+    expect(await marked(page)).toBe("kept");
+  });
+
+  test.describe("without JavaScript", () => {
+    test.use({ javaScriptEnabled: false });
+
+    test("CONTENT-R21 the same links are ordinary links", async ({ page }) => {
+      await page.goto("/");
+      const nav = page.getByRole("banner").getByRole("navigation", { name: "Main" });
+      const first = navigation[0];
+      await nav.getByRole("link", { name: first.label, exact: true }).click();
+      await expect(page).toHaveURL(new RegExp(`${first.href}$`));
+      await expectHeader(page, first.href);
+    });
+  });
+});

@@ -48,7 +48,9 @@ for (const initiative of initiatives) {
       await page.goto(initiative.path);
       const body = article(page);
       await expect(body.getByRole("heading", { level: 1 })).toHaveText(initiative.title);
-      await expect(body.locator("[data-status]")).toHaveText(`Status: ${initiative.status}`);
+      await expect(body.locator("[data-initiative-status]")).toHaveText(
+        `Status: ${initiative.status}`,
+      );
       for (const heading of ["Problem", "Proposal", "Demo", "Links"]) {
         await expect(body.getByRole("heading", { level: 2, name: heading })).toBeVisible();
       }

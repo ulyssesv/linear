@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { contentComponents } from "@/components/content";
+import { mdxComponents } from "@/components/content";
 import { ArrowRightIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
+import { SiteLink } from "@/components/site-link";
 import { Badge } from "@/components/ui/badge";
 import { type ContentMeta, isInitiativeMeta } from "@/lib/content";
 import { type InitiativeKey, initiativePages } from "@/site";
@@ -39,13 +40,13 @@ export const Route = createFileRoute("/")({
 
 function MoreLink({ href, children }: Readonly<{ href: string; children: string }>) {
   return (
-    <a
+    <SiteLink
       href={href}
       className="group mt-4 inline-flex items-center gap-1.5 font-medium text-brand text-sm"
     >
       {children}
       <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-    </a>
+    </SiteLink>
   );
 }
 
@@ -66,14 +67,14 @@ function LandingPage() {
         <ul className="mt-4 grid gap-3 md:grid-cols-3">
           {cards.map((card) => (
             <li key={card.key} data-initiative={card.key} className="flex">
-              <a
+              <SiteLink
                 href={card.href}
                 className="group flex flex-1 flex-col rounded-xl border bg-card p-5 transition-colors hover:border-foreground/20 hover:bg-accent"
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="font-semibold text-base tracking-[-0.01em]">{card.title}</h3>
                   {card.status ? (
-                    <Badge data-status variant="secondary" className="mt-0.5">
+                    <Badge data-initiative-status variant="secondary" className="mt-0.5">
                       <span className="sr-only">Status: </span>
                       {card.status}
                     </Badge>
@@ -84,7 +85,7 @@ function LandingPage() {
                   Read the proposal
                   <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
-              </a>
+              </SiteLink>
             </li>
           ))}
         </ul>
@@ -96,7 +97,7 @@ function LandingPage() {
             This site
           </h2>
           <div className="mt-3 space-y-3 text-muted-foreground leading-7">
-            <Landing components={contentComponents} />
+            <Landing components={mdxComponents} />
           </div>
           <MoreLink href="/this-site">How it is built</MoreLink>
         </section>

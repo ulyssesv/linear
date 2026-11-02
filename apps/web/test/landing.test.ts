@@ -47,7 +47,7 @@ describe("landing route", () => {
       const meta = pageMeta[initiative.key];
       const card = page.slice(page.indexOf(`data-initiative="${initiative.key}"`));
       expect(card).toMatch(
-        new RegExp(`^data-initiative="${initiative.key}"[^>]*><a href="${initiative.href}"`),
+        new RegExp(`^data-initiative="${initiative.key}"[^>]*><a [^>]*href="${initiative.href}"`),
       );
       expect(card).toContain(`>${escapeHtml(meta.title)}</h3>`);
       expect(card).toContain(escapeHtml(meta.description));

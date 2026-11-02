@@ -73,8 +73,10 @@ describe("public pages", () => {
 
   it("CONTENT-R3 CONTENT-R4 the header carries the site name and a sign-in link back here", async () => {
     const { page } = await get("/about?x=1");
-    expect(page).toMatch(/<a href="\/"[^>]*>linear\.sesv\.co<\/a>/);
+    expect(page).toMatch(/<a [^>]*href="\/"[^>]*>linear\.sesv\.co<\/a>/);
     expect(page).toContain('href="/sign-in?next=%2Fabout%3Fx%3D1"');
-    expect(page).not.toContain('aria-current="page" href="/"');
+    const homeLink = page.match(/<a [^>]*href="\/"[^>]*>/)?.[0];
+    expect(homeLink).toBeDefined();
+    expect(homeLink).not.toContain('aria-current="page"');
   });
 });

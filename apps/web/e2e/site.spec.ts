@@ -17,7 +17,9 @@ test.describe("landing page", () => {
       const card = page.locator(`[data-initiative="${initiative.key}"]`);
       await expect(card.getByRole("heading", { level: 3 })).not.toBeEmpty();
       await expect(card.locator("p")).not.toBeEmpty();
-      await expect(card.locator("[data-status]")).toHaveText(/Status: (Planned|In progress|Live)/);
+      await expect(card.locator("[data-initiative-status]")).toHaveText(
+        /Status: (Planned|In progress|Live)/,
+      );
       await expect(card.getByRole("link")).toHaveAttribute("href", initiative.href);
     }
 
@@ -43,11 +45,11 @@ test.describe("landing page", () => {
       await page.goto("/");
       const card = page.locator(`[data-initiative="${initiative.key}"]`);
       const title = await card.getByRole("heading", { level: 3 }).textContent();
-      const status = await card.locator("[data-status]").textContent();
+      const status = await card.locator("[data-initiative-status]").textContent();
       await card.getByRole("link").click();
       await expect(page).toHaveURL(new RegExp(`${initiative.href}$`));
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(title ?? "");
-      await expect(page.locator("[data-status]")).toHaveText(status ?? "");
+      await expect(page.locator("[data-initiative-status]")).toHaveText(status ?? "");
     }
   });
 
