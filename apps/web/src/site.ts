@@ -1,4 +1,4 @@
-// Content of the landing page (SEED-R17). One entry per proof of concept.
+// Site name, navigation (CONTENT-R3) and the landing page's content (SEED-R17).
 
 export const site = {
   name: "linear.sesv.co",
@@ -8,6 +8,15 @@ export const site = {
     "the work and mirroring the documents.",
   repository: "https://github.com/ulyssesv/linear",
 } as const;
+
+/** The header navigation (CONTENT-R3): the three initiative pages, this site, about. */
+export const navigation = [
+  { href: "/planning-sheet", label: "Planning sheet" },
+  { href: "/metrics-rollup", label: "Metrics rollup" },
+  { href: "/ai-sdlc", label: "AI SDLC" },
+  { href: "/this-site", label: "This site" },
+  { href: "/about", label: "About" },
+] as const;
 
 export type ProofOfConcept = {
   key: "planning-sheet" | "metrics-rollup" | "ai-sdlc";

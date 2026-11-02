@@ -1,7 +1,7 @@
 ---
 id: CONTENT
 title: Site content, information architecture and look
-status: approved
+status: implementing
 area: site-platform
 linear:
   initiative: https://linear.app/sesv/initiative/site-platform-6ac5ff8c3199

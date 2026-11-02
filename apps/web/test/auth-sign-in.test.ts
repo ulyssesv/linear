@@ -2,7 +2,7 @@
 // (MIRROR-R17). The handlers run against a scratch database and a fake Linear.
 import { createHash } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { safeNext, signInErrors } from "../src/auth.ts";
+import { safeNext, signInErrors, signInHref, signOutTarget } from "../src/auth.ts";
 import { parseCookies } from "../src/server/auth/cookies.ts";
 import {
   decodeAttempt,
@@ -228,6 +228,13 @@ describe("sign-in start", () => {
 });
 
 describe("callback", () => {
+  it("CONTENT-R4 returns to the public page the sign-in started from", async () => {
+    const h = harness();
+    const response = await signIn(h, "/about?x=1#bio");
+    expect(response.status).toBe(302);
+    expect(response.headers.get("location")).toBe("https://linear.sesv.co/about?x=1#bio");
+  });
+
   it("MIRROR-R16 accepts a member of the app's workspace and starts a session", async () => {
     const h = harness();
     const response = await signIn(h, "/sheets/projects");
@@ -301,7 +308,7 @@ describe("callback", () => {
   it("MIRROR-R16 with an allowlist, accepts a listed email whatever its case", async () => {
     const h = harness({ allowlist: ["grace@example.com", "ada@example.com"] });
     const response = await signIn(h);
-    expect(response.headers.get("location")).toBe("https://linear.sesv.co/sheets");
+    expect(response.headers.get("location")).toBe("https://linear.sesv.co/");
     expect(setCookies(response).has(sessionName)).toBe(true);
   });
 
@@ -434,19 +441,56 @@ describe("acceptance rule", () => {
       reason: "not-in-workspace",
     });
   });
+});
 
+describe("return path", () => {
   it.each([
-    [undefined, "/sheets"],
+    [undefined, "/"],
+    [42, "/"],
+    ["/", "/"],
+    ["/sheets", "/sheets"],
     ["/sheets/projects", "/sheets/projects"],
     ["/sheets?x=1", "/sheets?x=1"],
-    ["https://evil.example/sheets", "/sheets"],
-    ["//evil.example/sheets", "/sheets"],
-    ["/sheets//evil.example", "/sheets"],
-    ["/sheets\\..\\evil", "/sheets"],
-    ["/sheetsevil", "/sheets"],
-    ["/", "/sheets"],
-  ])("MIRROR-R16 the return path %j becomes %j", (raw, expected) => {
+    ["/about", "/about"],
+    ["/planning-sheet#demo", "/planning-sheet#demo"],
+    ["/this-site?a=1&b=2", "/this-site?a=1&b=2"],
+    ["", "/"],
+    ["about", "/"],
+    ["https://evil.example/sheets", "/"],
+    ["http:/evil.example", "/"],
+    ["javascript:alert(1)", "/"],
+    ["//evil.example/sheets", "/"],
+    ["/sheets//evil.example", "/"],
+    ["/\\evil.example", "/"],
+    ["/sheets\\..\\evil", "/"],
+    ["/about\nLocation: https://evil.example", "/"],
+    ["/about\u0000", "/"],
+    ["/about\u007f", "/"],
+    [`/${"a".repeat(511)}`, `/${"a".repeat(511)}`],
+    [`/${"a".repeat(512)}`, "/"],
+  ])("CONTENT-R5 the return path %j becomes %j", (raw, expected) => {
     expect(safeNext(raw)).toBe(expected);
+  });
+
+  it("CONTENT-R4 the sign-in link carries the page it was followed from", () => {
+    expect(signInHref("/about")).toBe("/sign-in?next=%2Fabout");
+    expect(signInHref("/sheets?view=compact")).toBe("/sign-in?next=%2Fsheets%3Fview%3Dcompact");
+    expect(signInHref("/")).toBe("/sign-in");
+    expect(signInHref("/sign-in?next=%2Fabout")).toBe("/sign-in");
+    expect(signInHref("https://evil.example")).toBe("/sign-in");
+  });
+
+  it.each([
+    [undefined, "/"],
+    ["/about", "/about"],
+    ["/planning-sheet?x=1", "/planning-sheet?x=1"],
+    ["/sheets", "/"],
+    ["/sheets/projects", "/"],
+    ["/sheets?view=compact", "/"],
+    ["/sheetsevil", "/sheetsevil"],
+    ["//evil.example", "/"],
+  ])("CONTENT-R4 signing out from %j lands on %j", (from, expected) => {
+    expect(signOutTarget(from)).toBe(expected);
   });
 });
 
@@ -457,14 +501,42 @@ describe("sign-out", () => {
     return { h, id: cookieValue(setCookies(response).get(sessionName)) };
   }
 
-  const signOut = (h: Harness, id: string, headers: Record<string, string> = {}) =>
+  const signOut = (
+    h: Harness,
+    id: string,
+    headers: Record<string, string> = {},
+    body?: URLSearchParams,
+  ) =>
     handleSignOut(
       new Request("http://internal:3000/auth/sign-out", {
         method: "POST",
         headers: { cookie: `${sessionName}=${id}`, ...headers },
+        body,
       }),
       h.deps,
     );
+
+  it("CONTENT-R4 returns to the public page the form was posted from", async () => {
+    const { h, id } = await signedIn();
+    const response = await signOut(
+      h,
+      id,
+      { origin: publicUrl },
+      new URLSearchParams({ next: "/about?x=1" }),
+    );
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("https://linear.sesv.co/about?x=1");
+    expect(await counts()).toMatchObject({ sessions: 0 });
+  });
+
+  it.each(["/sheets/projects", "https://evil.example/", "//evil.example"])(
+    "CONTENT-R4 CONTENT-R5 from %j lands on the home page",
+    async (next) => {
+      const { h, id } = await signedIn();
+      const response = await signOut(h, id, { origin: publicUrl }, new URLSearchParams({ next }));
+      expect(response.headers.get("location")).toBe("https://linear.sesv.co/");
+    },
+  );
 
   it("MIRROR-R17 ends the session and clears the cookie", async () => {
     const { h, id } = await signedIn();

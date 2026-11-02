@@ -23,7 +23,7 @@ export default defineConfig({
   projects: [
     {
       name: "local",
-      testMatch: ["site.spec.ts", "database.spec.ts", "auth.spec.ts"],
+      testMatch: ["site.spec.ts", "database.spec.ts", "auth.spec.ts", "content.spec.ts"],
       use: { baseURL: `http://localhost:${port}` },
     },
     {

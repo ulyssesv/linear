@@ -5,6 +5,8 @@
 # Last matching line wins.
 *.md                      review-documentation
 docs/**                   review-documentation
+# Site copy groups with documentation (CONTENT-R10).
+apps/web/content/**       review-documentation
 **/*.test.ts              review-test
 **/*.test.tsx             review-test
 **/e2e/**                 review-test
