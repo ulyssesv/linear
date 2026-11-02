@@ -103,7 +103,8 @@ Non-goals:
   proposal, a demo section, and links to its Linear initiative and to its specs and
   records in the repository. The demo section either links to the demo, saying that it
   needs sign-in with a Linear account of the workspace when the visitor is anonymous, or
-  says that no demo is available yet and links nowhere.
+  says that no demo is available yet and links nowhere. The planning-sheet page's demo
+  section links to `/sheets`.
 - **CONTENT-R13** (e2e) `/this-site` has four sections with stable anchors: `#stack`
   (how it is built), `#delivery` (how it is released and deployed), `#process` (specs,
   records and the Linear loop) and `#ai` (how AI is used in the work). It links to the
@@ -148,7 +149,8 @@ Non-goals:
 | `/about` | About | Name, biography, contact links | The author |
 
 The initiative's status label is one of Planned, In progress or Live, kept in the page's
-`meta` and changed by hand. Reading it from Linear is a possible later step.
+`meta` and changed by hand. The planning sheet starts as In progress, the other two as
+Planned. Reading it from Linear is a possible later step.
 
 ## 5. Design notes
 
@@ -187,11 +189,12 @@ form and lands there when the path is public.
 SEED-R17 (cards now link to initiative pages; the Linear links move onto those pages)
 and CONTENT-R15 and CONTENT-R18 replace SEED-R19. The task that lands each change marks
 the SEED line `dropped` with a pointer here and moves its test citations. SEED-R17's
-footer clause carries over unchanged into CONTENT-R17. MIRROR-R26, still open in
-[LIN-32](https://linear.app/sesv/issue/LIN-32), asks for the planning-sheet card to read
-"In progress" and link to the sheets. Under CONTENT-R11 the card links to
-`/planning-sheet`, whose demo section links to the sheets; T3 rewords MIRROR-R26 to say
-so, with the author's agreement, and keeps its test citation.
+footer clause carries over unchanged into CONTENT-R17.
+
+**What this spec takes over from MIRROR.** The landing page belongs to this spec, so the
+planning-sheet card of MIRROR-R26 moved here and MIRROR-R26 is dropped. The card is
+CONTENT-R11 and links to `/planning-sheet`; the way into the sheets is that page's demo
+section, CONTENT-R12. MIRROR keeps the sheets themselves and their guard.
 
 **Navigation on small screens.** A `<details>`/`<summary>` menu collapses the navigation
 below the small breakpoint, which keeps it usable without JavaScript (CONTENT-R6).
