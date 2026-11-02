@@ -1,5 +1,6 @@
-// What the site ships is open source and listed with its licence, and no Linear mark is
-// in the repository (CONTENT-R16).
+// What the site ships is open source, or a demo library under a licence an accepted record
+// chooses, and is listed with its licence; no Linear mark is in the repository
+// (CONTENT-R16).
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -57,16 +58,20 @@ const importedPackages = [
   ),
 ];
 
-/** A licence outside the open-source set is allowed when an accepted record chooses it. */
+/**
+ * A licence outside the open-source set is allowed when an accepted record chooses it
+ * and names the package (by its name without the npm scope).
+ */
 const records = readdirSync(join(web, "..", "..", "docs", "records")).filter((name) =>
   /^\d{3}-/.test(name),
 );
-function acceptedRecord(licence: string): boolean {
+function acceptedRecord(licence: string, name: string): boolean {
   const id = /REC-(\d{3})/.exec(licence)?.[1];
-  const file = records.find((name) => name.startsWith(`${id}-`));
+  const file = records.find((record) => record.startsWith(`${id}-`));
   if (!id || !file) return false;
   const text = readFileSync(join(web, "..", "..", "docs", "records", file), "utf8");
-  return /^status: accepted$/m.test(text);
+  const named = name.replace(/^@/, "").split("/")[0] ?? name;
+  return /^status: accepted$/m.test(text) && text.toLowerCase().includes(named.toLowerCase());
 }
 
 const declaredLicence = (name: string): string =>
@@ -86,19 +91,26 @@ describe("third-party licences", () => {
 
   it("CONTENT-R16 every listed package has the licence it declares, and it is open source", () => {
     for (const [name, licence = ""] of listed) {
-      if (acceptedRecord(licence)) continue;
+      if (acceptedRecord(licence, name ?? "")) continue;
       expect(openSource.has(licence), `${name}: ${licence}`).toBe(true);
       expect(declaredLicence(name ?? ""), name).toBe(licence);
     }
   });
 
-  it("CONTENT-R16 a licence outside open source must cite an accepted record", () => {
-    expect(acceptedRecord("Non-commercial licence, REC-004")).toBe(true);
-    expect(acceptedRecord("Non-commercial licence")).toBe(false);
-    expect(acceptedRecord("Non-commercial licence, REC-999")).toBe(false);
+  it("CONTENT-R16 a licence outside open source must cite an accepted record naming the package", () => {
+    const licence = "Non-commercial licence, REC-004";
+    expect(acceptedRecord(licence, "handsontable")).toBe(true);
+    expect(acceptedRecord(licence, "@handsontable/react-wrapper")).toBe(true);
+    expect(acceptedRecord(licence, "ag-grid-enterprise")).toBe(false);
+    expect(acceptedRecord("Non-commercial licence", "handsontable")).toBe(false);
+    expect(acceptedRecord("Non-commercial licence, REC-999", "handsontable")).toBe(false);
     const closed = [...listed].filter(([, licence = ""]) => !openSource.has(licence));
-    for (const [name, licence = ""] of closed) {
-      expect(acceptedRecord(licence), `${name}: ${licence}`).toBe(true);
+    expect(closed.map(([name]) => name).sort()).toEqual([
+      "@handsontable/react-wrapper",
+      "handsontable",
+    ]);
+    for (const [name = "", licence = ""] of closed) {
+      expect(acceptedRecord(licence, name), `${name}: ${licence}`).toBe(true);
     }
   });
 
