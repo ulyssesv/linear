@@ -17,7 +17,7 @@ function provider(fetch: typeof globalThis.fetch, clock = manualClock(), extra =
 }
 
 describe("client-credentials token", () => {
-  it("MIRROR-R2 requests an app token with the client credentials grant and scopes read,write", async () => {
+  it("MIRROR-R2 requests an app token with the client credentials grant and scopes read,write,initiative:read", async () => {
     const { fetch, calls } = scriptedFetch(tokenResponse("app-token-1"));
     expect(await provider(fetch).getToken()).toBe("app-token-1");
 
@@ -34,9 +34,10 @@ describe("client-credentials token", () => {
     const body = new URLSearchParams(String(call?.init.body));
     expect(Object.fromEntries(body)).toEqual({
       grant_type: "client_credentials",
-      scope: "read,write",
+      scope: "read,write,initiative:read",
     });
-    expect(linearAppScopes).toEqual(["read", "write"]);
+    // Linear refuses initiatives and initiative labels to an app actor with `read` alone.
+    expect(linearAppScopes).toEqual(["read", "write", "initiative:read"]);
   });
 
   it("MIRROR-R2 caches the token until shortly before it expires", async () => {

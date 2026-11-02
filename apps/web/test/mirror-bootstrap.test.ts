@@ -11,7 +11,7 @@ import { excerpt } from "../src/server/mirror/listing.ts";
 import { listMirrored, mirrorIsEmpty, syncStatus } from "../src/server/mirror/read.ts";
 import { tables } from "../src/server/mirror/tables.ts";
 import { mirrorTypes } from "../src/server/mirror/types.ts";
-import { json, manualClock } from "./linear-fakes.ts";
+import { initiativeScopeMessage, json, manualClock } from "./linear-fakes.ts";
 import {
   appEnv,
   fakeLinear,
@@ -352,6 +352,34 @@ describe("bootstrap", () => {
     const [entry] = await sql`select * from mirror_sync_log order by id limit 1`;
     expect(entry).toMatchObject({ source: "bootstrap", outcome: "ok", changed: first.changed });
     expect(entry?.counts.projects).toEqual(first.counts.projects);
+  });
+
+  it("MIRROR-R2 MIRROR-R10 the app token carries the scope Linear asks for initiatives", async () => {
+    // The fake refuses initiatives as Linear does; every bootstrap above got through it.
+    const { linear, result } = run(fixtureWorkspace());
+    await result;
+    const tokenRequest = linear.calls.find((call) => call.url.endsWith("/oauth/token"));
+    expect(new URLSearchParams(String(tokenRequest?.init.body)).get("scope")).toContain(
+      "initiative:read",
+    );
+    expect(ids(await listMirrored(sql, "initiatives"))).not.toHaveLength(0);
+
+    // Without it, the bootstrap fails the way the scheduler did against Linear.
+    const readOnly = fakeLinear(fixtureWorkspace());
+    const client = createAppLinearClient(appEnv, {
+      fetch: ((input, init = {}) =>
+        readOnly.fetch(
+          input,
+          String(input).endsWith("/oauth/token")
+            ? { ...init, body: "grant_type=client_credentials&scope=read,write" }
+            : init,
+        )) as typeof globalThis.fetch,
+      now: clock.now,
+      sleep: clock.sleep,
+    });
+    await expect(bootstrap({ sql, client, now: clock.now })).rejects.toThrow(
+      `Linear API HTTP 400: ${initiativeScopeMessage}`,
+    );
   });
 
   it("MIRROR-R10 a failed listing writes nothing and is logged as failed", async () => {

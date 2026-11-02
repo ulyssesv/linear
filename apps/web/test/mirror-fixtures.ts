@@ -6,7 +6,7 @@
 // team (Sandbox, SBX) with a sub-team of its own. Everything whose id contains "sbx" must
 // never reach the mirror (MIRROR-R12).
 import type { ListedType } from "../src/server/mirror/listing.ts";
-import { json, type Recorded, tokenResponse } from "./linear-fakes.ts";
+import { json, type Recorded, scopeGate, tokenResponse } from "./linear-fakes.ts";
 
 export type Node = Record<string, unknown>;
 export type Workspace = Record<ListedType, Node[]>;
@@ -183,7 +183,8 @@ export type FakeLinear = {
 /**
  * A fetch that issues an app token and answers the listing queries from `workspace`,
  * `pageSize` nodes at a time whatever `first` asks, so small fixtures still page.
- * `fail(type)` returning a Response replaces the answer for that type.
+ * `fail(type)` returning a Response replaces the answer for that type. Like Linear, it
+ * refuses initiatives and initiative labels to a token issued without `initiative:read`.
  */
 export function fakeLinear(
   workspace: Workspace,
@@ -191,15 +192,19 @@ export function fakeLinear(
 ): FakeLinear {
   const calls: Recorded[] = [];
   const pageSize = options.pageSize ?? 2;
+  const scopes = scopeGate();
   const fetch = async (input: RequestInfo | URL, init: RequestInit = {}) => {
     calls.push({ url: String(input), init });
-    if (String(input).endsWith("/oauth/token")) return tokenResponse("app-token");
+    if (String(input).endsWith("/oauth/token")) {
+      scopes.grant("app-token", init);
+      return tokenResponse("app-token");
+    }
     const { query, variables } = JSON.parse(String(init.body)) as {
       query: string;
       variables: { first: number; after: string | null };
     };
     const type = /\{\s*(\w+)\(/.exec(query)?.[1] as ListedType;
-    const failure = options.fail?.(type);
+    const failure = options.fail?.(type) ?? scopes.refuse(init, type);
     if (failure) return failure;
     const all = workspace[type] ?? [];
     const start = variables.after ? Number(variables.after) : 0;

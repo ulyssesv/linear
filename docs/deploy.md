@@ -96,8 +96,14 @@ match what the server sends:
 | Callback URL (redirect URI) | `https://linear.sesv.co/auth/linear/callback`, that is `${PUBLIC_URL}/auth/linear/callback` |
 | Webhook URL | `https://linear.sesv.co/webhooks/linear`, that is `${PUBLIC_URL}/webhooks/linear` |
 | Webhook categories | Project, Project update, Initiative, Initiative update |
-| Client credentials | Enabled; the server requests a token with scopes `read,write` |
-| Scopes | `read` and `write` (`write` is unused until planning sheet P2) |
+| Client credentials | Enabled; the server requests a token with scopes `read,write,initiative:read` |
+| Scopes | `read` and `write` (`write` is unused until planning sheet P2); sign-in asks users for these two |
+
+Linear serves initiatives and initiative labels to the app actor only with
+`initiative:read`, which its OAuth scope list does not mention; with `read` alone the
+scheduler's bootstrap fails with HTTP 400 "Invalid scope". Changing the scopes the server
+requests revokes the app's existing tokens; the server stores its token under the scope set
+it was requested with, so the first run after such a change requests a new one.
 
 The paths are fixed in `apps/web/src/server/linear/urls.ts`. Both must reach the pod
 through the ingress, the webhook path from Linear's servers on the public internet.
