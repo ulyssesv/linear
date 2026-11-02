@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/site-footer";
 
-// Index of the sheets (MIRROR-R15). The sheets themselves arrive with MIRROR T7.
+// Index of the sheets (MIRROR-R15): links to the projects and initiatives sheets.
 export const Route = createFileRoute("/sheets/")({
   component: SheetsIndex,
 });
