@@ -47,6 +47,12 @@ export type ReceiveOptions = {
 /** Under Linear's five seconds, with room for the network. */
 export const responseBudgetMs = 4_000;
 const statementTimeoutMs = 3_000;
+/**
+ * A hard cap on the whole delivery transaction, after which Postgres ends it (and the
+ * connection) and nothing is committed. Open sheets rely on it: a webhook's sequence
+ * number is committed or gone within this time (sheets/freshness.ts, settleMs).
+ */
+export const transactionTimeoutMs = 5_000;
 /** Linear's payloads are a few kilobytes; a project with a long description stays far below. */
 export const maxBodyBytes = 1024 * 1024;
 
@@ -210,6 +216,7 @@ async function processDelivery(
   const startedAt = clock();
   return (await sql.begin(async (tx) => {
     await tx.unsafe(`set local statement_timeout = ${statementTimeoutMs}`);
+    await tx.unsafe(`set local transaction_timeout = ${transactionTimeoutMs}`);
     const [fresh] = await tx`
       insert into webhook_deliveries (delivery_id, received_at, type, action, outcome)
       values (${delivery}, ${startedAt}, ${event.type}, ${event.action}, 'ignored')

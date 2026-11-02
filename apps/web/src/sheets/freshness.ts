@@ -12,6 +12,14 @@
 //   status, a label group, a user, for projects an initiative, for initiatives a project)
 //   can touch any row and the columns, and a bootstrap or reconcile run may commit rows
 //   below a version the client already saw.
+//
+// Webhook transactions can also commit out of order: one takes sequence 10, another 11,
+// and 11 commits first. A client that moved its marker to 11 would never hear of 10, since
+// the mirror's version stays 11. So the page asks for changes since the newest marker it
+// observed at least `settleMs` ago, not since the latest one; a webhook transaction is
+// capped at five seconds (server/webhooks/receive.ts), so by then every lower sequence has
+// committed or rolled back. Rows already merged come again for a few polls; merging by id
+// makes that harmless.
 import type { SheetKind, SheetModel, SheetRow } from "./model.ts";
 
 /** The mirror's change marker, as of a read: see MirrorFreshness on the server. */
@@ -32,6 +40,49 @@ export type SheetChanges =
 
 /** What the page asks: changes to a sheet since the marker it holds. */
 export type SheetChangesInput = { kind: SheetKind; version: number; bulkRun: number };
+
+/** How long a version must have been seen before the page stops asking for what is below it. */
+export const settleMs = 10_000;
+
+/** Markers the page has observed, oldest first, each with when it was first seen. */
+export type MarkerHistory = readonly { at: number; freshness: SheetFreshness }[];
+
+/** The newest marker seen at least `settleMs` before `now`, or the oldest kept. */
+function settled(history: MarkerHistory, now: number) {
+  let base = history[0];
+  for (const entry of history) if (entry.at <= now - settleMs) base = entry;
+  return base;
+}
+
+/** Records a marker the server answered with; keeps only what `markerInput` may still use. */
+export function observeMarker(
+  history: MarkerHistory,
+  freshness: SheetFreshness,
+  now: number,
+): MarkerHistory {
+  const last = history.at(-1)?.freshness;
+  const next =
+    last && last.version === freshness.version && last.bulkRun === freshness.bulkRun
+      ? [...history]
+      : [...history, { at: now, freshness }];
+  const base = settled(next, now);
+  return base ? next.slice(next.indexOf(base)) : next;
+}
+
+/** The marker to send: the settled version, and the latest bulk run. */
+export function markerInput(
+  kind: SheetKind,
+  history: MarkerHistory,
+  now: number,
+): SheetChangesInput {
+  const base = settled(history, now);
+  const latest = history.at(-1);
+  return {
+    kind,
+    version: base?.freshness.version ?? 0,
+    bulkRun: latest?.freshness.bulkRun ?? 0,
+  };
+}
 
 const kinds: readonly SheetKind[] = ["projects", "initiatives"];
 

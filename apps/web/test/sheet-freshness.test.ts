@@ -17,9 +17,12 @@ import { changedTypes, mirrorFreshness } from "../src/server/mirror/read.ts";
 import { loadSheetView, sheetChanges, sheetChangesFor } from "../src/server/sheets/load.ts";
 import {
   applyChange,
+  markerInput,
+  observeMarker,
   parseSheetChangesInput,
   relativeTime,
   type SheetFreshness,
+  settleMs,
 } from "../src/sheets/freshness.ts";
 import type { SheetModel, SheetRow } from "../src/sheets/model.ts";
 import { startPolling, type VisibilitySource } from "../src/sheets/poller.ts";
@@ -86,6 +89,35 @@ describe("merging a change into a sheet", () => {
     expect(relativeTime("2026-11-02T11:58:00Z", now)).toBe("2 minutes ago");
     expect(relativeTime("2026-11-02T09:00:00Z", now)).toBe("3 hours ago");
     expect(relativeTime("2026-11-01T11:00:00Z", now)).toBe("yesterday");
+  });
+});
+
+describe("the marker a sheet sends", () => {
+  const f = (version: number, bulkRun = 1): SheetFreshness => ({
+    version,
+    bulkRun,
+    lastChangeAt: null,
+  });
+
+  it("MIRROR-R24 asks from the newest version seen at least settleMs ago, with the latest bulk run", () => {
+    let history = observeMarker([], f(10), 0);
+    history = observeMarker(history, f(12, 2), 3_000);
+    expect(markerInput("projects", history, 3_000)).toEqual({
+      kind: "projects",
+      version: 10,
+      bulkRun: 2,
+    });
+    history = observeMarker(history, f(12, 2), 6_000);
+    expect(markerInput("projects", history, 6_000).version).toBe(10);
+    expect(markerInput("projects", history, 3_000 + settleMs).version).toBe(12);
+  });
+
+  it("MIRROR-R24 keeps only the markers it may still ask from", () => {
+    let history = observeMarker([], f(1), 0);
+    history = observeMarker(history, f(2), 1_000);
+    history = observeMarker(history, f(3), 2_000);
+    history = observeMarker(history, f(3), 1_000 + settleMs);
+    expect(history.map((entry) => entry.freshness.version)).toEqual([2, 3]);
   });
 });
 
@@ -288,6 +320,39 @@ describe("changes since a marker", () => {
     ]);
     // Reference data was read in full to build them.
     expect(result.change.rows[0]?.cells.lead).toEqual({ name: "Ana" });
+  });
+
+  it("MIRROR-R24 still delivers a webhook write that commits after a newer one", async () => {
+    const start = await mirrorFreshness(sql);
+    let release: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let taken: () => void = () => {};
+    const seqTaken = new Promise<void>((resolve) => {
+      taken = resolve;
+    });
+    // The older write takes its sequence number first and commits last.
+    const older = sql.begin(async (tx) => {
+      const record = projectFromNode(project("p-late", ["team-test"], { updatedAt: later() }));
+      await applyRecords(tx, "projects", [record], webhook());
+      taken();
+      await held;
+    });
+    await seqTaken;
+    await writeProject("p-early");
+
+    const first = await sheetChanges(sql, marker(start));
+    const ids = (change: typeof first.change) =>
+      change?.type === "rows" ? change.rows.map((row) => row.id) : [];
+    expect(ids(first.change)).toEqual(["p-early"]);
+
+    release();
+    await older;
+    // The latest marker hides it: the mirror's version did not move.
+    expect((await sheetChanges(sql, marker(first.freshness))).change).toBeNull();
+    // The settled marker, which the page sends for settleMs, still brings it.
+    expect(ids((await sheetChanges(sql, marker(start))).change)).toContain("p-late");
   });
 
   it("MIRROR-R24 sends a removal as the row with its flag", async () => {

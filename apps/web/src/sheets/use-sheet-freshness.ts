@@ -3,7 +3,14 @@
 // is a GET server function and nothing is stored in the browser (MIRROR-R20).
 import { useEffect, useRef, useState } from "react";
 import { getSheetChanges } from "@/server/sheets/functions";
-import { applyChange, type SheetFreshness, type SheetView } from "./freshness.ts";
+import {
+  applyChange,
+  type MarkerHistory,
+  markerInput,
+  observeMarker,
+  type SheetFreshness,
+  type SheetView,
+} from "./freshness.ts";
 import type { SheetModel } from "./model.ts";
 import { startPolling } from "./poller.ts";
 
@@ -25,7 +32,8 @@ export function useSheetFreshness(view: SheetView): {
   const [model, setModel] = useState(view.model);
   const [freshness, setFreshness] = useState(view.freshness);
   const [state, setState] = useState<FreshnessState>("live");
-  const cursor = useRef(view.freshness);
+  // Markers seen so far; polls ask from a settled one (freshness.ts explains why).
+  const history = useRef<MarkerHistory>([{ at: Date.now(), freshness: view.freshness }]);
   const kind = view.model.kind;
 
   useEffect(
@@ -33,16 +41,13 @@ export function useSheetFreshness(view: SheetView): {
       startPolling({
         intervalMs: pollIntervalMs,
         visibility: document,
-        poll: () =>
-          getSheetChanges({
-            data: { kind, version: cursor.current.version, bulkRun: cursor.current.bulkRun },
-          }),
+        poll: () => getSheetChanges({ data: markerInput(kind, history.current, Date.now()) }),
         onResult: (result) => {
           if (!result.signedIn) {
             setState("signed-out");
             return false;
           }
-          cursor.current = result.freshness;
+          history.current = observeMarker(history.current, result.freshness, Date.now());
           setFreshness(result.freshness);
           const { change } = result;
           if (change) setModel((current) => applyChange(current, change));
