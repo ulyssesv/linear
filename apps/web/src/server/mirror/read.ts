@@ -88,6 +88,58 @@ export type SyncStatus = {
 
 const sources: readonly SyncSource[] = ["bootstrap", "webhook", "reconcile"];
 
+/** The highest sync_seq over every mirror table; 0 while the mirror is empty. */
+async function mirrorVersion(sql: Db): Promise<number> {
+  const seqs = mirrorTypes.map((type) => `select max(sync_seq) as seq from ${tables[type].table}`);
+  const [version] = await sql.unsafe(
+    `select max(seq) as version from (${seqs.join(" union all ")}) s`,
+  );
+  return Number(version?.version ?? 0);
+}
+
+/**
+ * What an open sheet polls to learn that the mirror changed (MIRROR-R24): three index
+ * lookups, cheap enough to ask every few seconds.
+ */
+export type MirrorFreshness = {
+  /** As SyncStatus.version. */
+  version: number;
+  /**
+   * The id of the latest bootstrap or reconcile run that changed rows, 0 before any. Such a
+   * run writes many rows in one transaction, which may commit after a webhook with a
+   * higher sync_seq; a reader that sees this id move re-reads in full rather than trusting
+   * the rows after its last version.
+   */
+  bulkRun: number;
+  /** As SyncStatus.lastChangeAt. */
+  lastChangeAt: string | null;
+};
+
+export async function mirrorFreshness(sql: Db): Promise<MirrorFreshness> {
+  const [log] = await sql`
+    select
+      (select max(finished_at) from mirror_sync_log where changed > 0) as last_change_at,
+      (select max(id) from mirror_sync_log where changed > 0 and source <> 'webhook') as bulk_run
+  `;
+  return {
+    version: await mirrorVersion(sql),
+    bulkRun: Number(log?.bulk_run ?? 0),
+    lastChangeAt: iso(log?.last_change_at),
+  };
+}
+
+/** The entity types with a row written after `afterSeq`, in mirrorTypes order. */
+export async function changedTypes(sql: Db, afterSeq: number): Promise<MirrorType[]> {
+  const probes = mirrorTypes.map(
+    (type) =>
+      `select '${type}' as type where exists ` +
+      `(select 1 from ${tables[type].table} where sync_seq > $1)`,
+  );
+  const rows = await sql.unsafe(probes.join(" union all "), [afterSeq]);
+  const changed = new Set(rows.map((row) => String(row.type)));
+  return mirrorTypes.filter((type) => changed.has(type));
+}
+
 /** When the mirror last changed and when each feeder last ran (MIRROR-R14). */
 export async function syncStatus(sql: Db): Promise<SyncStatus> {
   const [changed] = await sql`
@@ -103,10 +155,7 @@ export async function syncStatus(sql: Db): Promise<SyncStatus> {
     from mirror_sync_log
     group by source
   `;
-  const seqs = mirrorTypes.map((type) => `select max(sync_seq) as seq from ${tables[type].table}`);
-  const [version] = await sql.unsafe(
-    `select max(seq) as version from (${seqs.join(" union all ")}) s`,
-  );
+  const version = await mirrorVersion(sql);
 
   const bySource = new Map(perSource.map((row) => [String(row.source), row]));
   const status = (source: SyncSource): SourceStatus => {
@@ -125,7 +174,7 @@ export async function syncStatus(sql: Db): Promise<SyncStatus> {
   ];
   return {
     lastChangeAt: iso(changed?.at),
-    version: Number(version?.version ?? 0),
+    version,
     bootstrap,
     webhook,
     reconcile,

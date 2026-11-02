@@ -154,6 +154,15 @@ and must not be cached by the proxy (the server sends `cache-control: no-store`)
 | `/auth/linear/callback` | GET | yes | OAuth redirect URI (see [Linear OAuth app](#linear-oauth-app)); creates the session |
 | `/auth/sign-out` | POST | yes | Ends the session and clears the cookie; cross-origin requests get 403 |
 | `/sheets` and below | GET | no | Redirect to `/sign-in` without a session |
+| `/_serverFn/*` | GET | no | Sheet data and the freshness poll (below); each checks the session itself |
+
+An open sheet asks the server whether the mirror changed every 3 seconds while its tab
+is visible (MIRROR-R24): one small GET to `/_serverFn/*` per open sheet, answered from
+three index lookups, with the changed rows only when something changed. A hidden tab
+stops asking. Nothing to configure, but the proxy must not cache or buffer these
+responses (they carry `cache-control: no-store`), and its idle and request timeouts only
+need to exceed a normal request: there is no long-lived connection. Polling while a tab
+is visible counts as activity for the session's idle timeout.
 
 `/`, `/healthz` and `/readyz` stay public and never read the session store. A request
 without a session cookie does not touch the database for auth at all.
@@ -370,6 +379,11 @@ resources:
 No CPU limit, to avoid throttling server rendering. Revisit when the planning sheet adds
 mirror and Electric traffic. The `migrate` Job's hints are in [Migrations](#migrations),
 the `scheduler` CronJob's in [Scheduler](#scheduler).
+
+The server does not compress responses. Please enable compression at the ingress
+(Traefik's `compress` middleware, gzip or brotli) for this host. It matters for the
+sheets (MIRROR-R25): with three hundred projects the sheet's data is about 300 KiB, or
+15 KiB gzipped, and the grid's script about 820 KiB, or 190 KiB gzipped.
 
 ## Hostname
 

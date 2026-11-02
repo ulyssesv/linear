@@ -124,7 +124,7 @@ export function cellText(shape: CellShape, value: CellValue): string {
 }
 
 /** Linear's priority scale. */
-const priorities: Record<number, string> = {
+export const priorityLabels: Readonly<Record<number, string>> = {
   0: "No priority",
   1: "Urgent",
   2: "High",
@@ -133,7 +133,7 @@ const priorities: Record<number, string> = {
 };
 
 export function priorityBadge(priority: number): Chip {
-  return { label: priorities[priority] ?? "No priority", color: null };
+  return { label: priorityLabels[priority] ?? "No priority", color: null };
 }
 
 /** Linear's health values, with the colours Linear shows them in. */

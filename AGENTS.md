@@ -101,6 +101,11 @@ can be edited at any time.
   settings outside the repository), and how to verify the change by hand. The author
   reviews in the pull request or in the chat; address the feedback on the same branch
   and post an updated summary. Never merge; the author approves and merges on GitHub.
+- A push is done when CI on the pushed commit is done. Ready for review means CI is
+  green on the pull request's head commit, not only locally; the summary names the run.
+  When CI fails, keep the issue In Progress, diagnose from the failed step's log and push
+  one fix. If CI fails again, stop and raise it with the author with the diagnosis
+  instead of trying again.
 - Every change to `main` goes through a pull request. No direct pushes after the seed
   commit.
 - Specs state testable requirements. Design notes explain; they do not legislate.
