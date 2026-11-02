@@ -43,7 +43,8 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number | 
       await io.serve(result.env);
       return undefined;
     }
-    return runMigrate({ ...result.env, DATABASE_URL: result.env.DATABASE_URL as string }, io);
+    // Required above, so parseEnv has set it.
+    return runMigrate(result.env as Env & { DATABASE_URL: string }, io);
   }
   const owner = reserved[command];
   if (owner) {
