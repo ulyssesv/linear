@@ -119,6 +119,7 @@ script is added or changes.
 | `pnpm test:smoke` | Playwright `smoke` project against `BASE_URL`, asserting `EXPECTED_COMMIT` when set |
 | `pnpm smoke:container <image>` | Run an image under the production security flags and check `/healthz` and the reserved commands |
 | `pnpm linear:sync [--dry-run]` | Mirror specs and records to Linear documents; `--dry-run` prints the plan and writes nothing |
+| `pnpm seed:fixtures [--dry-run]` | Seed the planning sheet fixtures under the `Test` team hierarchy with a personal `LINEAR_API_KEY`; idempotent, never deletes; `--dry-run` prints the plan and writes nothing; `--help` for options |
 
 Playwright needs Chromium once per machine:
 `pnpm --filter @sesv/web exec playwright install chromium` (add `--with-deps` on Linux).

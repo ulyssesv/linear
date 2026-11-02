@@ -1,0 +1,16 @@
+{
+  "name": "@sesv/seed",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed:fixtures": "node src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@linear/sdk": "98.0.0"
+  },
+  "devDependencies": {
+    "vitest": "5.0.5"
+  }
+}
