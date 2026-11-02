@@ -2,7 +2,7 @@
 // anonymous and signed in, and links to Linear and the repository. `local` project only:
 // signed-in tests write a session through e2e/auth.ts.
 import type { Page } from "@playwright/test";
-import { proofsOfConcept, site } from "../src/site.ts";
+import { initiativePages, site } from "../src/site.ts";
 import { expect, test } from "./auth.ts";
 
 const initiatives = [
@@ -60,10 +60,10 @@ for (const initiative of initiatives) {
       page,
     }) => {
       await page.goto(initiative.path);
-      const poc = proofsOfConcept.find((item) => item.key === initiative.key);
+      const poc = initiativePages.find((item) => item.key === initiative.key);
       expect(poc).toBeDefined();
       const body = article(page);
-      await expect(body.locator(`a[href="${poc?.link.href}"]`)).toHaveCount(1);
+      await expect(body.locator(`a[href="${poc?.linear}"]`)).toHaveCount(1);
       for (const doc of initiative.docs) {
         const kind = doc.endsWith(".md") ? "blob" : "tree";
         await expect(

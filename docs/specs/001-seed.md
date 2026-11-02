@@ -129,10 +129,12 @@ Non-goals:
 
 ### Placeholder site
 
-- **SEED-R17** (e2e) `GET /` renders the site name, a one-paragraph purpose, one card per
-  proof of concept (planning sheet, metrics rollup, AI SDLC) with a status label and a
-  link to its Linear initiative or spec, a link to the GitHub repository, and a footer
-  with the deployed version and short commit SHA.
+- **SEED-R17** (dropped) Replaced by CONTENT-R11 (the landing page, whose cards now link
+  to initiative pages that carry the Linear links) and CONTENT-R17 (the footer, whose
+  version, commit and repository link carry over unchanged). Was: `GET /` renders the site
+  name, a one-paragraph purpose, one card per proof of concept (planning sheet, metrics
+  rollup, AI SDLC) with a status label and a link to its Linear initiative or spec, a link
+  to the GitHub repository, and a footer with the deployed version and short commit SHA.
 - **SEED-R18** (unit) The landing route is server-rendered and readable with JavaScript
   disabled. Later routes may opt out of server rendering individually.
 - **SEED-R19** (dropped) Replaced by CONTENT-R15 (the look, on the same Tailwind and

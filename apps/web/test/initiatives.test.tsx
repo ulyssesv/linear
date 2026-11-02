@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ContentPage } from "../src/components/content.tsx";
 import { type ContentModule, initiativeStatuses, isInitiativeMeta } from "../src/lib/content.ts";
-import { proofsOfConcept } from "../src/site.ts";
+import { initiativePages } from "../src/site.ts";
 
 const modules = import.meta.glob<ContentModule>("../content/*.mdx", { eager: true });
 const moduleFor = (key: string) => {
@@ -27,7 +27,7 @@ const render = (module: ContentModule) =>
 describe("initiative pages", () => {
   it("CONTENT-R12 there is one page per initiative", () => {
     expect(initiatives.map((page) => page.key).sort()).toEqual(
-      proofsOfConcept.map((poc) => poc.key).sort(),
+      initiativePages.map((page) => page.key).sort(),
     );
   });
 
@@ -66,8 +66,8 @@ describe("initiative pages", () => {
   });
 
   it.each(initiatives)("CONTENT-R12 $key links to its Linear initiative", ({ key }) => {
-    const initiative = proofsOfConcept.find((poc) => poc.key === key);
-    expect(render(moduleFor(key))).toContain(`href="${initiative?.link.href}"`);
+    const initiative = initiativePages.find((page) => page.key === key);
+    expect(render(moduleFor(key))).toContain(`href="${initiative?.linear}"`);
   });
 
   it("CONTENT-R12 only initiative pages carry a status", () => {

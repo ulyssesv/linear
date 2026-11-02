@@ -1,11 +1,8 @@
-// Site name, navigation (CONTENT-R3) and the landing page's content (SEED-R17).
+// Site name, navigation (CONTENT-R3) and the initiatives the landing page presents
+// (CONTENT-R11).
 
 export const site = {
   name: "linear.sesv.co",
-  purpose:
-    "Proofs of concept and documentation for proposals to Linear. Each proposal is built in " +
-    "the open from specs and decision records kept in the repository, with Linear tracking " +
-    "the work and mirroring the documents.",
   repository: "https://github.com/ulyssesv/linear",
 } as const;
 
@@ -18,44 +15,26 @@ export const navigation = [
   { href: "/about", label: "About" },
 ] as const;
 
-export type ProofOfConcept = {
-  key: "planning-sheet" | "metrics-rollup" | "ai-sdlc";
-  title: string;
-  summary: string;
-  status: "Planned" | "In progress" | "Live";
-  link: { label: string; href: string };
-};
+/**
+ * The three initiatives: their page and their Linear initiative. Title, summary and status
+ * live in each page's content file (CONTENT-R11, CONTENT-R12).
+ */
+export type InitiativeKey = "planning-sheet" | "metrics-rollup" | "ai-sdlc";
 
-export const proofsOfConcept: readonly ProofOfConcept[] = [
+export const initiativePages: readonly { key: InitiativeKey; href: string; linear: string }[] = [
   {
     key: "planning-sheet",
-    title: "Planning sheet",
-    summary: "A spreadsheet-like surface over Linear initiatives and projects.",
-    status: "Planned",
-    link: {
-      label: "Initiative in Linear",
-      href: "https://linear.app/sesv/initiative/planning-sheet-7f1a80410512",
-    },
+    href: "/planning-sheet",
+    linear: "https://linear.app/sesv/initiative/planning-sheet-7f1a80410512",
   },
   {
     key: "metrics-rollup",
-    title: "Metrics rollup",
-    summary: "Goals tied to metrics, rolled up from issues to projects to initiatives.",
-    status: "Planned",
-    link: {
-      label: "Initiative in Linear",
-      href: "https://linear.app/sesv/initiative/metrics-rollup-8bbaf276122a",
-    },
+    href: "/metrics-rollup",
+    linear: "https://linear.app/sesv/initiative/metrics-rollup-8bbaf276122a",
   },
   {
     key: "ai-sdlc",
-    title: "AI SDLC",
-    summary:
-      "Linear alongside specs, decision records and glossaries whose source of truth is a repository.",
-    status: "Planned",
-    link: {
-      label: "Initiative in Linear",
-      href: "https://linear.app/sesv/initiative/ai-sdlc-4f642730a3cf",
-    },
+    href: "/ai-sdlc",
+    linear: "https://linear.app/sesv/initiative/ai-sdlc-4f642730a3cf",
   },
 ];
