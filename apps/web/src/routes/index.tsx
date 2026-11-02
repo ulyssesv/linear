@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { SiteFooter } from "@/components/site-footer";
+import { PageContainer } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -11,19 +11,20 @@ import {
 } from "@/components/ui/card";
 import { proofsOfConcept, site } from "@/site";
 
+// The landing page, moved into the site shell by CONTENT T1; CONTENT T3 rewrites it.
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 export function Landing() {
   return (
-    <div className="mx-auto flex min-h-dvh max-w-4xl flex-col px-6 py-12">
-      <header className="space-y-4">
+    <PageContainer>
+      <div className="space-y-4">
         <h1 className="font-semibold text-3xl tracking-tight">{site.name}</h1>
         <p className="max-w-2xl text-muted-foreground leading-relaxed">{site.purpose}</p>
-      </header>
+      </div>
 
-      <main className="mt-10 flex-1">
+      <section className="mt-10">
         <h2 className="sr-only">Proofs of concept</h2>
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {proofsOfConcept.map((poc) => (
@@ -50,9 +51,7 @@ export function Landing() {
             </li>
           ))}
         </ul>
-      </main>
-
-      <SiteFooter />
-    </div>
+      </section>
+    </PageContainer>
   );
 }

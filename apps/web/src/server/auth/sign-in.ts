@@ -8,7 +8,7 @@
 // stored, and the tokens Linear just issued are revoked.
 //
 // Log lines name the Linear user id and the outcome; never a token, code or email.
-import { type SignInError, safeNext, signInPath } from "../../auth.ts";
+import { type SignInError, safeNext, signInPath, signOutTarget } from "../../auth.ts";
 import type { Sql } from "../db/client.ts";
 import type { Env } from "../env.ts";
 import { createLinearClient } from "../linear/client.ts";
@@ -215,7 +215,10 @@ export async function handleCallback(request: Request, deps: AuthDeps): Promise<
   ]);
 }
 
-/** POST /auth/sign-out: end the session, clear the cookie, go home. */
+/**
+ * POST /auth/sign-out: end the session, clear the cookie, and go back to the form's `next`
+ * page when it is public, or home otherwise (CONTENT-R4).
+ */
 export async function handleSignOut(request: Request, deps: AuthDeps): Promise<Response> {
   const { env } = deps;
   // SameSite=Lax already keeps the cookie off cross-site POSTs; refuse them outright too.
@@ -233,7 +236,20 @@ export async function handleSignOut(request: Request, deps: AuthDeps): Promise<R
     cookies.get(sessionCookieName(env.PUBLIC_URL)),
   );
   (deps.log ?? defaultLog)({ event: "auth.sign_out" });
-  return redirect(absolute(env, "/"), 303, [clearSessionCookie(env.PUBLIC_URL)]);
+  const target = signOutTarget(await formField(request, "next"));
+  return redirect(absolute(env, target), 303, [clearSessionCookie(env.PUBLIC_URL)]);
+}
+
+/** One text field of a form body, or undefined when the body is not a form. */
+async function formField(request: Request, name: string): Promise<string | undefined> {
+  const type = request.headers.get("content-type") ?? "";
+  if (!/^(?:application\/x-www-form-urlencoded|multipart\/form-data)/i.test(type)) return;
+  try {
+    const value = (await request.formData()).get(name);
+    return typeof value === "string" ? value : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** An error's class and message. Messages from the auth and Linear modules carry no secret. */

@@ -85,3 +85,50 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* The one prose style of content pages (CONTENT-R9). CONTENT T2 restyles it. */
+@layer components {
+  .prose {
+    @apply max-w-2xl text-base leading-relaxed;
+
+    & > * + * {
+      @apply mt-4;
+    }
+    & h1 {
+      @apply font-semibold text-3xl tracking-tight;
+    }
+    & h2 {
+      @apply mt-10 scroll-mt-6 font-semibold text-xl tracking-tight;
+    }
+    & h3 {
+      @apply mt-8 scroll-mt-6 font-semibold text-lg;
+    }
+    & a {
+      @apply underline underline-offset-4 hover:text-muted-foreground;
+    }
+    & ul {
+      @apply list-disc space-y-1 pl-6;
+    }
+    & ol {
+      @apply list-decimal space-y-1 pl-6;
+    }
+    & code {
+      @apply rounded bg-muted px-1 py-0.5 font-mono text-sm;
+    }
+    & pre {
+      @apply overflow-x-auto rounded-md border bg-muted p-4 text-sm;
+    }
+    & pre code {
+      @apply bg-transparent p-0;
+    }
+    & blockquote {
+      @apply border-l-2 pl-4 text-muted-foreground;
+    }
+    & hr {
+      @apply my-8;
+    }
+    & table {
+      @apply block overflow-x-auto text-sm;
+    }
+  }
+}
