@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { type MigrateCommand, run } from "../src/cli.ts";
 import type { Env } from "../src/server/env.ts";
+import { serveEnv as required } from "./serve-env.ts";
 
-const DATABASE_URL = "postgres://linear:secret@db.internal:5432/linear";
+const DATABASE_URL = required.DATABASE_URL;
 
-function io(env: Record<string, string | undefined> = { DATABASE_URL }) {
+function io(env: Record<string, string | undefined> = required) {
   const out: string[] = [];
   const err: string[] = [];
   const serve = vi.fn(async (_env: Env) => {});
@@ -31,27 +32,43 @@ describe("CLI entrypoint", () => {
     expect(t.serve).toHaveBeenCalledWith({
       PORT: 3000,
       PUBLIC_URL: "http://localhost:3000",
-      DATABASE_URL,
+      ...required,
     });
   });
 
   it("SEED-R24 serve starts the web server with the validated environment", async () => {
-    const t = io({ PORT: "8080", DATABASE_URL });
+    const t = io({ ...required, PORT: "8080" });
     expect(await run(["serve"], t.io)).toBeUndefined();
     expect(t.serve).toHaveBeenCalledWith({
       PORT: 8080,
       PUBLIC_URL: "http://localhost:3000",
-      DATABASE_URL,
+      ...required,
     });
   });
 
   it("SEED-R22 serve exits non-zero listing the invalid variables", async () => {
-    const t = io({ PORT: "nope", PUBLIC_URL: "nope" });
+    const t = io({ ...required, PORT: "nope", PUBLIC_URL: "nope" });
     expect(await run(["serve"], t.io)).toBe(1);
     expect(t.serve).not.toHaveBeenCalled();
     const message = t.err.join("\n");
     expect(message).toMatch(/PORT: /);
     expect(message).toMatch(/PUBLIC_URL: /);
+  });
+
+  it("MIRROR-R7 serve exits non-zero listing every missing name without printing values", async () => {
+    const t = io({ ...required, LINEAR_CLIENT_SECRET: undefined, SESSION_SECRET: "hunter2" });
+    expect(await run(["serve"], t.io)).toBe(1);
+    expect(t.serve).not.toHaveBeenCalled();
+    const message = t.err.join("\n");
+    expect(message).toMatch(/LINEAR_CLIENT_SECRET: is required/);
+    expect(message).toMatch(/SESSION_SECRET: must be at least 32 characters/);
+    expect(message).not.toMatch(/hunter2|test-client-id|postgres:/);
+  });
+
+  it("MIRROR-R7 migrate needs only DATABASE_URL", async () => {
+    const t = io({ DATABASE_URL });
+    expect(await run(["migrate"], t.io)).toBe(0);
+    expect(t.migrate).toHaveBeenCalledWith({ DATABASE_URL });
   });
 
   it("MIRROR-R6 serve requires DATABASE_URL, so the server never starts without a database", async () => {

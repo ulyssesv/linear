@@ -6,6 +6,8 @@
 # seccompProfile: RuntimeDefault, readOnlyRootFilesystem) against a throwaway Postgres on
 # a private Docker network: `migrate` applies the migrations and is safe to run again,
 # `serve` answers /healthz and is ready on /readyz, and `scheduler` behaves as specified.
+# serve gets the throwaway database and harmless placeholders for its other required
+# names, and must refuse to start without its environment.
 #
 # Usage: tools/container-smoke.sh <image>
 # Optional env: EXPECTED_VERSION (exact), EXPECTED_COMMIT (prefix, so a short SHA works),
@@ -52,6 +54,15 @@ user=$(docker image inspect --format '{{.Config.User}}' "$image")
 [[ ${user%%:*} =~ ^[0-9]+$ && ${user%%:*} != 0 ]] || fail "image USER is '$user', want a numeric non-root uid"
 pass "image runs as uid ${user%%:*}"
 
+# Harmless values for the other names serve requires (MIRROR-R7); none is a credential.
+serve_env=(
+  --env LINEAR_CLIENT_ID=smoke-client-id
+  --env LINEAR_CLIENT_SECRET=smoke-client-secret
+  --env LINEAR_WEBHOOK_SECRET=smoke-webhook-secret
+  --env SESSION_SECRET=smoke-session-secret-at-least-32-characters
+  --env TOKEN_ENCRYPTION_KEY=c21va2UtdG9rZW4tZW5jcnlwdGlvbi1rZXktMzItYnk=
+)
+
 # A throwaway database configured as production's: logical replication on (docs/deploy.md).
 docker network create "$network" >/dev/null
 docker run --detach --name "$db" --network "$network" \
@@ -79,7 +90,7 @@ oneoff --env DATABASE_URL="postgres://linear:linear@${db}:1/linear" "$image" mig
 pass "'migrate' exits $code when the database cannot be reached"
 
 docker run --detach --name "$name" "${hardening[@]}" --network "$network" \
-  --env DATABASE_URL="$database_url" --publish 127.0.0.1::3000 "$image" serve >/dev/null
+  --env DATABASE_URL="$database_url" "${serve_env[@]}" --publish 127.0.0.1::3000 "$image" serve >/dev/null
 host_port=$(docker port "$name" 3000/tcp | head -n 1 | sed 's/.*://')
 url="http://127.0.0.1:${host_port}/healthz"
 
@@ -119,5 +130,12 @@ code=0
 oneoff --env DATABASE_URL="$database_url" "$image" scheduler >/dev/null 2>&1 || code=$?
 [[ $code == 2 ]] || fail "'scheduler' exited $code, want 2"
 pass "'scheduler' is reserved and exits 2"
+
+# MIRROR-R7: serve refuses to start without its environment, naming what is missing.
+code=0
+output=$(docker run --rm "${hardening[@]}" "$image" serve 2>&1) || code=$?
+[[ $code == 1 ]] || fail "'serve' without its environment exited $code, want 1"
+grep -q "DATABASE_URL: is required" <<<"$output" || fail "'serve' did not name DATABASE_URL as missing"
+pass "'serve' without its environment exits 1 listing the missing names"
 
 echo "container-smoke: passed for $image"

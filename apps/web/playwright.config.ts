@@ -40,10 +40,17 @@ export default defineConfig({
     : {
         command: "node dist/cli.mjs migrate && node dist/cli.mjs serve",
         url: `http://localhost:${port}/healthz`,
+        // The real database, plus harmless values for the other names serve requires
+        // (MIRROR-R7); none is a credential.
         env: {
           PORT: String(port),
           PUBLIC_URL: `http://localhost:${port}`,
           DATABASE_URL: databaseUrl,
+          LINEAR_CLIENT_ID: "e2e-client-id",
+          LINEAR_CLIENT_SECRET: "e2e-client-secret",
+          LINEAR_WEBHOOK_SECRET: "e2e-webhook-secret",
+          SESSION_SECRET: "e2e-session-secret-at-least-32-characters",
+          TOKEN_ENCRYPTION_KEY: "ZTJlLXRva2VuLWVuY3J5cHRpb24ta2V5LTMyLWJ5dGU=",
         },
         // Never reuse: a server left on the port from another checkout would be tested in
         // place of this build. A busy port fails the run; E2E_PORT moves it.

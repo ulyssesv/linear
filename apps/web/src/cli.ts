@@ -5,10 +5,10 @@ import { buildInfo, shortCommit } from "./server/build-info.ts";
 import { closeDatabase, createSql } from "./server/db/client.ts";
 import { type MigrateResult, migrate } from "./server/db/migrate.ts";
 import { migrations } from "./server/db/migrations.ts";
-import { type Env, parseEnv } from "./server/env.ts";
+import { type Env, type EnvFor, parseEnvFor } from "./server/env.ts";
 import { startServer } from "./server/start.ts";
 
-export type MigrateCommand = (env: Env & { DATABASE_URL: string }) => Promise<MigrateResult>;
+export type MigrateCommand = (env: EnvFor<"migrate">) => Promise<MigrateResult>;
 
 export type CliIo = {
   env: Readonly<Record<string, string | undefined>>;
@@ -32,19 +32,17 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number | 
     io.stderr(usage);
     return 1;
   }
-  if (command === "serve" || command === "migrate") {
-    const result = parseEnv(io.env, ["DATABASE_URL"]);
-    if (!result.ok) {
-      io.stderr("Invalid environment:");
-      for (const error of result.errors) io.stderr(`  ${error}`);
-      return 1;
-    }
-    if (command === "serve") {
-      await io.serve(result.env);
-      return undefined;
-    }
-    // Required above, so parseEnv has set it.
-    return runMigrate(result.env as Env & { DATABASE_URL: string }, io);
+  // MIRROR-R7: each command validates only the names it uses and lists every problem.
+  if (command === "serve") {
+    const result = parseEnvFor("serve", io.env);
+    if (!result.ok) return invalidEnv(result.errors, io);
+    await io.serve(result.env);
+    return undefined;
+  }
+  if (command === "migrate") {
+    const result = parseEnvFor("migrate", io.env);
+    if (!result.ok) return invalidEnv(result.errors, io);
+    return runMigrate(result.env, io);
   }
   const owner = reserved[command];
   if (owner) {
@@ -56,8 +54,14 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number | 
   return 1;
 }
 
+function invalidEnv(errors: readonly string[], io: CliIo): number {
+  io.stderr("Invalid environment:");
+  for (const error of errors) io.stderr(`  ${error}`);
+  return 1;
+}
+
 // MIRROR-R5: exit 0 once every migration is applied, 1 on any failure; safe to run again.
-async function runMigrate(env: Env & { DATABASE_URL: string }, io: CliIo): Promise<number> {
+async function runMigrate(env: EnvFor<"migrate">, io: CliIo): Promise<number> {
   try {
     const { applied } = await io.migrate(env);
     io.stdout(
@@ -74,7 +78,7 @@ async function runMigrate(env: Env & { DATABASE_URL: string }, io: CliIo): Promi
 }
 
 /** Applies the migrations bundled into this build over one connection. */
-async function migrateDatabase(env: Env & { DATABASE_URL: string }): Promise<MigrateResult> {
+async function migrateDatabase(env: EnvFor<"migrate">): Promise<MigrateResult> {
   const sql = createSql(env.DATABASE_URL, { max: 1 });
   try {
     return await migrate(sql, migrations);

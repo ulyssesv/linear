@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from
 import { closeDatabase } from "../src/server/db/client.ts";
 import { startServer } from "../src/server/start.ts";
 import type { ScratchDatabase } from "./scratch-db.ts";
+import { serveEnv } from "./serve-env.ts";
 import { scratchDatabase, testDatabaseUrl } from "./test-db.ts";
 
 const dist = inject("dist");
@@ -137,15 +138,20 @@ describe("built CLI", () => {
   });
 
   it("SEED-R22 serve exits non-zero on an invalid environment", async () => {
-    const { code, stderr } = await exit(cli(["serve"], { PORT: "nope" }));
+    const { code, stderr } = await exit(cli(["serve"], { ...serveEnv, PORT: "nope" }));
     expect(code).toBe(1);
     expect(stderr).toMatch(/PORT: /);
-    expect(stderr).toMatch(/DATABASE_URL: is required/);
+  });
+
+  it("MIRROR-R7 serve exits non-zero listing every missing name", async () => {
+    const { code, stderr } = await exit(cli(["serve"]));
+    expect(code).toBe(1);
+    for (const name of Object.keys(serveEnv)) expect(stderr).toContain(`${name}: is required`);
   });
 
   it("SEED-R24 MIRROR-R6 serve is the default, answers /healthz and /readyz until stopped", async () => {
     const port = await freePort();
-    const child = cli([], { PORT: String(port), DATABASE_URL: testDatabaseUrl() });
+    const child = cli([], { ...serveEnv, PORT: String(port), DATABASE_URL: testDatabaseUrl() });
     const done = exit(child);
     try {
       let response: Response | undefined;
