@@ -16,6 +16,7 @@ import { Route as SheetsRouteImport } from './routes/sheets'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthSignOutRouteImport } from './routes/auth/sign-out'
 import { Route as SheetsIndexRouteImport } from './routes/sheets/index'
+import { Route as WebhooksLinearRouteImport } from './routes/webhooks/linear'
 import { Route as AuthLinearCallbackRouteImport } from './routes/auth/linear/callback'
 import { Route as AuthLinearSignInRouteImport } from './routes/auth/linear/sign-in'
 
@@ -54,6 +55,11 @@ const SheetsIndexRoute = SheetsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SheetsRoute,
 } as any)
+const WebhooksLinearRoute = WebhooksLinearRouteImport.update({
+  id: '/webhooks/linear',
+  path: '/webhooks/linear',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLinearCallbackRoute = AuthLinearCallbackRouteImport.update({
   id: '/auth/linear/callback',
   path: '/auth/linear/callback',
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/auth/sign-out': typeof AuthSignOutRoute
+  '/webhooks/linear': typeof WebhooksLinearRoute
   '/sheets/': typeof SheetsIndexRoute
   '/auth/linear/callback': typeof AuthLinearCallbackRoute
   '/auth/linear/sign-in': typeof AuthLinearSignInRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/readyz': typeof ReadyzRoute
   '/sign-in': typeof SignInRoute
   '/auth/sign-out': typeof AuthSignOutRoute
+  '/webhooks/linear': typeof WebhooksLinearRoute
   '/sheets': typeof SheetsIndexRoute
   '/auth/linear/callback': typeof AuthLinearCallbackRoute
   '/auth/linear/sign-in': typeof AuthLinearSignInRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/auth/sign-out': typeof AuthSignOutRoute
+  '/webhooks/linear': typeof WebhooksLinearRoute
   '/sheets/': typeof SheetsIndexRoute
   '/auth/linear/callback': typeof AuthLinearCallbackRoute
   '/auth/linear/sign-in': typeof AuthLinearSignInRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/sheets'
     | '/sign-in'
     | '/auth/sign-out'
+    | '/webhooks/linear'
     | '/sheets/'
     | '/auth/linear/callback'
     | '/auth/linear/sign-in'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/readyz'
     | '/sign-in'
     | '/auth/sign-out'
+    | '/webhooks/linear'
     | '/sheets'
     | '/auth/linear/callback'
     | '/auth/linear/sign-in'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/sheets'
     | '/sign-in'
     | '/auth/sign-out'
+    | '/webhooks/linear'
     | '/sheets/'
     | '/auth/linear/callback'
     | '/auth/linear/sign-in'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   SheetsRoute: typeof SheetsRouteWithChildren
   SignInRoute: typeof SignInRoute
   AuthSignOutRoute: typeof AuthSignOutRoute
+  WebhooksLinearRoute: typeof WebhooksLinearRoute
   AuthLinearCallbackRoute: typeof AuthLinearCallbackRoute
   AuthLinearSignInRoute: typeof AuthLinearSignInRoute
 }
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SheetsIndexRouteImport
       parentRoute: typeof SheetsRoute
     }
+    '/webhooks/linear': {
+      id: '/webhooks/linear'
+      path: '/webhooks/linear'
+      fullPath: '/webhooks/linear'
+      preLoaderRoute: typeof WebhooksLinearRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/linear/callback': {
       id: '/auth/linear/callback'
       path: '/auth/linear/callback'
@@ -230,6 +250,7 @@ const rootRouteChildren: RootRouteChildren = {
   SheetsRoute: SheetsRouteWithChildren,
   SignInRoute: SignInRoute,
   AuthSignOutRoute: AuthSignOutRoute,
+  WebhooksLinearRoute: WebhooksLinearRoute,
   AuthLinearCallbackRoute: AuthLinearCallbackRoute,
   AuthLinearSignInRoute: AuthLinearSignInRoute,
 }

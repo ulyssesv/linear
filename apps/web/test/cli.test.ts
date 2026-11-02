@@ -129,6 +129,7 @@ describe("CLI entrypoint", () => {
       changed: 2,
       counts: expect.objectContaining({ projects: typeCounts }),
       linear: { requests: 10, complexity: 8_345 },
+      prunedDeliveries: null,
     });
     expect(t.err).toEqual([]);
   });

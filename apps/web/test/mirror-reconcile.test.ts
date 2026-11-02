@@ -447,6 +447,23 @@ describe("scheduler", () => {
     );
   });
 
+  it("MIRROR-R11 MIRROR-R13 prunes webhook delivery ids older than a week after an ok pass", async () => {
+    const linear = fakeLinear(fixtureWorkspace());
+    clock.advance(minute);
+    const day = 24 * 60 * minute;
+    await sql`delete from webhook_deliveries`;
+    await sql`
+      insert into webhook_deliveries (delivery_id, received_at, type, action, outcome)
+      values
+        ('old', ${new Date(clock.now() - 8 * day)}, 'Project', 'update', 'applied'),
+        ('recent', ${new Date(clock.now() - 6 * day)}, 'Project', 'update', 'applied')
+    `;
+    const result = await schedulerPass(env(), { fetch: linear.fetch, now: clock.now });
+    expect(result).toMatchObject({ outcome: "ok", prunedDeliveries: 1 });
+    const left = await sql`select delivery_id from webhook_deliveries`;
+    expect(left.map((row) => row.delivery_id)).toEqual(["recent"]);
+  });
+
   it("MIRROR-R13 reports a failed pass without throwing", async () => {
     const linear = fakeLinear(fixtureWorkspace(), {
       fail: () => json({ errors: [{ message: "down" }] }, { status: 503 }),

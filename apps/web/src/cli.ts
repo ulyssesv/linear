@@ -130,6 +130,7 @@ export function schedulerLogLine(result: SchedulerResult): Record<string, unknow
     changed: result.changed,
     counts: result.counts,
     linear,
+    prunedDeliveries: result.prunedDeliveries ?? null,
   };
 }
 

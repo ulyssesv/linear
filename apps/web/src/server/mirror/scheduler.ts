@@ -4,16 +4,26 @@
 //
 // The app token comes from the database, encrypted (app-token-store.ts), so a CronJob that
 // starts a process every few minutes reuses one token for its 30 days.
+//
+// After a successful pass it also prunes webhook delivery ids older than
+// `deliveryRetentionMs`: Linear retries a delivery for at most about 6 hours, so a week
+// of ids still stops every retry and replay from applying twice.
 import { createSql } from "../db/client.ts";
 import type { EnvFor } from "../env.ts";
 import { createDatabaseTokenStore } from "../linear/app-token-store.ts";
 import { createAppLinearClient } from "../linear/client.ts";
+import { pruneDeliveries } from "../webhooks/receive.ts";
 import { type PassResult, runSyncPass } from "./reconcile.ts";
 
 export type SchedulerResult = PassResult & {
   /** GraphQL requests the pass made and the complexity Linear charged for them. */
   linear: { requests: number; complexity: number };
+  /** Webhook delivery ids pruned after an ok pass; null when pruning failed or did not run. */
+  prunedDeliveries?: number | null;
 };
+
+/** How long webhook delivery ids are kept for deduplication. */
+export const deliveryRetentionMs = 7 * 24 * 60 * 60 * 1000;
 
 export type SchedulerOptions = {
   /** For tests: Linear is never reached through anything else. */
@@ -45,7 +55,14 @@ export async function schedulerPass(
       },
     });
     const result = await runSyncPass({ sql, client, now: options.now });
-    return { ...result, linear };
+    if (result.outcome !== "ok") return { ...result, linear };
+    // Housekeeping only: the pass is already committed, so a failed prune does not fail it.
+    const now = options.now ?? Date.now;
+    const prunedDeliveries = await pruneDeliveries(
+      sql,
+      new Date(now() - deliveryRetentionMs),
+    ).catch(() => null);
+    return { ...result, linear, prunedDeliveries };
   } finally {
     await sql.end({ timeout: 5 });
   }
