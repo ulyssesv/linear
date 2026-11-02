@@ -1,16 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { run } from "../src/cli.ts";
 import type { Env } from "../src/server/env.ts";
-
-// Harmless values that satisfy every format serve requires (MIRROR-R7).
-const required = {
-  DATABASE_URL: "postgres://app:app@localhost:5432/app",
-  LINEAR_CLIENT_ID: "test-client-id",
-  LINEAR_CLIENT_SECRET: "test-client-secret",
-  LINEAR_WEBHOOK_SECRET: "test-webhook-secret",
-  SESSION_SECRET: "s".repeat(32),
-  TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
-};
+import { serveEnv as required } from "./serve-env.ts";
 
 function io(env: Record<string, string | undefined> = required) {
   const out: string[] = [];

@@ -6,6 +6,7 @@ import {
   linearWebhookPath,
   linearWebhookUrl,
 } from "../src/server/linear/urls.ts";
+import { serveEnv } from "./serve-env.ts";
 
 describe("URLs given to Linear", () => {
   it("MIRROR-R3 fixes the OAuth callback and webhook paths", () => {
@@ -22,12 +23,7 @@ describe("URLs given to Linear", () => {
   it("MIRROR-R3 uses the PUBLIC_URL parsed from the environment", () => {
     const result = parseEnv({
       PUBLIC_URL: "http://localhost:3000/",
-      DATABASE_URL: "postgres://localhost/app",
-      LINEAR_CLIENT_ID: "id",
-      LINEAR_CLIENT_SECRET: "secret",
-      LINEAR_WEBHOOK_SECRET: "webhook",
-      SESSION_SECRET: "s".repeat(32),
-      TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
+      ...serveEnv,
     });
     if (!result.ok) throw new Error(result.errors.join("\n"));
     expect(linearOAuthCallbackUrl(result.env)).toBe("http://localhost:3000/auth/linear/callback");

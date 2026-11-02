@@ -1,16 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commandEnv, parseEnv, parseEnvFor, reservedEnv } from "../src/server/env.ts";
+import { serveEnv as complete } from "./serve-env.ts";
 
-// Harmless values that satisfy every format; none of them is a real credential.
-const tokenKey = Buffer.alloc(32, 1).toString("base64");
-const complete = {
-  DATABASE_URL: "postgres://app:app@localhost:5432/app",
-  LINEAR_CLIENT_ID: "test-client-id",
-  LINEAR_CLIENT_SECRET: "test-client-secret",
-  LINEAR_WEBHOOK_SECRET: "test-webhook-secret",
-  SESSION_SECRET: "s".repeat(32),
-  TOKEN_ENCRYPTION_KEY: tokenKey,
-};
 const defaults = { PORT: 3000, PUBLIC_URL: "http://localhost:3000" };
 
 describe("environment schema", () => {
@@ -131,17 +122,15 @@ describe("environment per command", () => {
     expect(result).toEqual({ ok: false, errors: ["DATABASE_URL: is required"] });
   });
 
-  it.each([
-    ["mysql://app@localhost/app"],
-    ["postgres://"],
-    ["localhost:5432/app"],
-    ["not a url"],
-  ])("MIRROR-R7 rejects DATABASE_URL=%j", (url) => {
-    const result = parseEnvFor("migrate", { DATABASE_URL: url });
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.errors).toEqual([expect.stringMatching(/^DATABASE_URL: must be a postgres/)]);
-  });
+  it.each([["mysql://app@localhost/app"], ["postgres://"], ["localhost:5432/app"], ["not a url"]])(
+    "MIRROR-R7 rejects DATABASE_URL=%j",
+    (url) => {
+      const result = parseEnvFor("migrate", { DATABASE_URL: url });
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.errors).toEqual([expect.stringMatching(/^DATABASE_URL: must be a postgres/)]);
+    },
+  );
 
   it("MIRROR-R7 accepts postgresql:// as well as postgres://", () => {
     const url = "postgresql://app:secret@db.internal:5432/app?sslmode=disable";
