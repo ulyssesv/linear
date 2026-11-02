@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer } from "@/components/page";
+import { SiteLink } from "@/components/site-link";
 import { site } from "@/site";
 
 // Index of the sheets (MIRROR-R15): links to the projects and initiatives sheets.
@@ -25,9 +26,9 @@ function SheetsIndex() {
         <ul className="space-y-4">
           {sheets.map((sheet) => (
             <li key={sheet.href}>
-              <a href={sheet.href} className="font-medium underline underline-offset-4">
+              <SiteLink href={sheet.href} className="font-medium underline underline-offset-4">
                 {sheet.title}
-              </a>
+              </SiteLink>
               <p className="text-muted-foreground text-sm">{sheet.summary}</p>
             </li>
           ))}

@@ -1,5 +1,6 @@
 import { signInHref, signOutPath } from "@/auth";
 import { MenuIcon } from "@/components/icons";
+import { SiteLink } from "@/components/site-link";
 import { ThemeControl } from "@/components/theme-control";
 import type { SessionUser } from "@/server/auth/sessions";
 import { navigation, site } from "@/site";
@@ -27,12 +28,12 @@ export function SiteHeader({
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-2 text-[13px]">
-        <a
+        <SiteLink
           href="/"
           className="font-semibold text-foreground text-sm tracking-[-0.01em] hover:text-foreground/80"
         >
           {site.name}
-        </a>
+        </SiteLink>
 
         <nav aria-label="Main" className="hidden flex-1 sm:block">
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1">{links}</ul>
@@ -68,13 +69,13 @@ function NavLinks({ pathname }: Readonly<{ pathname: string }>) {
     const current = pathname === item.href;
     return (
       <li key={item.href}>
-        <a
+        <SiteLink
           href={item.href}
           aria-current={current ? "page" : undefined}
           className="block rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-0 sm:py-1"
         >
           {item.label}
-        </a>
+        </SiteLink>
       </li>
     );
   });
@@ -104,12 +105,12 @@ function AccountControl({ user, href }: Readonly<{ user: SessionUser | null; hre
           </form>
         </>
       ) : (
-        <a
+        <SiteLink
           href={signInHref(href)}
           className="rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           Sign in
-        </a>
+        </SiteLink>
       )}
     </nav>
   );

@@ -32,7 +32,9 @@ flows from Linear into files automatically.
 - `apps/web/content/*.mdx`: the copy of the site's pages, one MDX file per page with
   `export const meta = { title, description }`. Routes render it with `ContentPage` from
   `apps/web/src/components/content.tsx`, which also holds the components copy may use.
-  Every page sits in the shell of `routes/__root.tsx`: header, `<main>`, footer.
+  Every page sits in the shell of `routes/__root.tsx`: header, `<main>`, footer. Links
+  between pages use `SiteLink` (`components/site-link.tsx`), which navigates without
+  reloading the document; MDX links get it automatically.
 - `apps/web/THIRD_PARTY.md`: every font, icon set and library the site ships, with its
   licence. A test fails when a runtime dependency or a package imported by `styles.css`
   is missing there. Fonts are self-hosted from `@fontsource-variable` packages; icons are

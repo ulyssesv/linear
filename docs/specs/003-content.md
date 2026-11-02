@@ -81,6 +81,10 @@ Non-goals:
   scrolling and the navigation stays reachable, without JavaScript.
 - **CONTENT-R7** (e2e) Every page has its own `<title>` and meta description, taken from
   its content file for content pages.
+- **CONTENT-R21** (e2e) With JavaScript, following a link from one site page to another
+  renders the next page in place, without reloading the document; the header, the
+  landing cards and links in the copy all do. Without JavaScript the same links are
+  ordinary links. Added in T7.
 
 ### Content files
 
@@ -209,6 +213,14 @@ planning-sheet card of MIRROR-R26 moved here and MIRROR-R26 is dropped. The card
 CONTENT-R11 and links to `/planning-sheet`; the way into the sheets is that page's demo
 section, CONTENT-R12. MIRROR keeps the sheets themselves and their guard.
 
+**Links between pages.** A plain `<a href>` reloads the whole document on every click,
+which shows as a flicker of the entire page. Internal links render through one
+`SiteLink` component that hands page paths to TanStack Router's `Link`, and MDX copy
+gets it as its `a` element, so links written in prose behave the same. Server endpoints
+(`/auth/...`, `/theme`), links with a query string and other origins stay plain links.
+The router still renders an `<a href>`, so without JavaScript nothing changes
+(CONTENT-R21).
+
 **Navigation on small screens.** A `<details>`/`<summary>` menu collapses the navigation
 below the small breakpoint, which keeps it usable without JavaScript (CONTENT-R6).
 
@@ -245,6 +257,7 @@ styling so content is written against the real look, then the pages.
 - [ ] T4 Initiative pages for the planning sheet, metrics rollup and AI SDLC (R12)
 - [ ] T5 This site page (R13)
 - [ ] T6 About page (R14)
+- [ ] T7 Client-side navigation between site pages (R21)
 
 ## 8. Open questions
 

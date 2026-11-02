@@ -40,7 +40,7 @@ describe("initiative pages", () => {
   it.each(initiatives)("CONTENT-R12 $key shows its status under the title", ({ key, status }) => {
     const module = moduleFor(key);
     expect(render(module)).toContain(
-      `<h1>${module.meta.title}</h1><p data-status="true" class="not-prose"><span class="sr-only">Status: </span><span data-slot="badge"`,
+      `<h1>${module.meta.title}</h1><p data-initiative-status="true" class="not-prose"><span class="sr-only">Status: </span><span data-slot="badge"`,
     );
     expect(render(module)).toMatch(new RegExp(`data-slot="badge"[^>]*>${status}</span>`));
   });
@@ -76,7 +76,7 @@ describe("initiative pages", () => {
       const key = path.replace("../content/", "").replace(/\.mdx$/, "");
       if (keys.includes(key)) continue;
       expect(isInitiativeMeta(module.meta)).toBe(false);
-      expect(render(module)).not.toContain("data-status");
+      expect(render(module)).not.toContain("data-initiative-status");
     }
   });
 
@@ -87,6 +87,6 @@ describe("initiative pages", () => {
     const html = renderToStaticMarkup(
       <ContentPage meta={{ title: "T", description: "D", status: "Done" }} Content={Empty} />,
     );
-    expect(html).not.toContain("data-status");
+    expect(html).not.toContain("data-initiative-status");
   });
 });
