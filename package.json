@@ -21,6 +21,8 @@
     "check:specs": "pnpm --filter @sesv/specs run check:specs",
     "linear:sync": "pnpm --filter @sesv/specs run linear:sync",
     "smoke:container": "bash tools/container-smoke.sh",
+    "db:up": "docker compose up --detach --wait postgres",
+    "db:down": "docker compose down",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm check:specs"
   },
   "devDependencies": {
