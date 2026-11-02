@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageContainer } from "@/components/page";
 import { site } from "@/site";
 
-// Index of the sheets (MIRROR-R15). The sheets themselves arrive with MIRROR T7.
+// Index of the sheets (MIRROR-R15): links to the projects and initiatives sheets.
 export const Route = createFileRoute("/sheets/")({
   head: () => ({ meta: [{ title: `Planning sheet · ${site.name}` }] }),
   component: SheetsIndex,
