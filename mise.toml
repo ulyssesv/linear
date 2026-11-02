@@ -8,5 +8,12 @@ min_version = "2026.9.16"
 node = "26.13.0"
 pnpm = "12.16.1"
 
+# Local secrets for `pnpm dev`, the CLI commands and the tools: one `.env` at the root of
+# the main checkout, read from every worktree through git's common directory, wherever the
+# worktree lives. A missing file is skipped, so CI and fresh clones run without one; outside
+# a git checkout the path falls back to `./.env`. `.env.example` lists the names.
+[env]
+_.file = { path = "{{ exec(command='dirname \"$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null || echo ./.git)\"') }}/.env", redact = true }
+
 [settings]
 lockfile = true
