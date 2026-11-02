@@ -161,8 +161,10 @@ Non-goals, deferred to the project named:
   applying it, whether by webhook or by reconcile.
 - **MIRROR-R25** (manual) A sheet of three hundred projects loads in under two seconds
   on the production host and scrolls without jank.
-- **MIRROR-R26** (e2e) The landing page card for the planning sheet reads "In progress"
-  and links to the sheets.
+- **MIRROR-R26** (dropped) Moved to spec CONTENT, which owns the landing page: the
+  planning-sheet card is CONTENT-R11 and its way into the sheets is the demo section of
+  `/planning-sheet`, CONTENT-R12. Was: the landing page card for the planning sheet
+  reads "In progress" and links to the sheets.
 
 ### Fixtures
 
@@ -285,7 +287,7 @@ start so P3 adds Electric without a database change.
 - End to end (Playwright, `local` project, against a database service): `migrate`,
   public and protected routes, both sheets with their columns, sort and filter, archived
   toggle, client-only rendering, the freshness indicator and an in-place update driven
-  by a simulated webhook, the landing card.
+  by a simulated webhook.
 - Checks: single grid importer, compose and CI database service, container smoke with
   `migrate` and `scheduler`.
 - Manual: the OAuth app, the private team, keyboard and column behaviours, the
@@ -312,8 +314,7 @@ red-green-refactor with tests that cite the requirement ids.
 - [ ] T8 Sheet behaviours: sort, filter, hide, keyboard, freeze, archived flag, freshness
       and in-place updates (R20, R21, R24, R25)
 - [ ] T9 Fixture seed tool and the private team (R27, R28)
-- [ ] T10 Deploy hand-off, landing card, log lines, first release and rollout
-      verification (R26, R29, R31)
+- [ ] T10 Deploy hand-off, log lines, first release and rollout verification (R29, R31)
 
 ## 8. Open questions
 
