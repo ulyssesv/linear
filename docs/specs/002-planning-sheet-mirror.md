@@ -1,7 +1,7 @@
 ---
 id: MIRROR
 title: Workspace mirror and read-only sheet
-status: draft
+status: approved
 area: planning-sheet
 linear:
   initiative: https://linear.app/sesv/initiative/planning-sheet-7f1a80410512
@@ -322,8 +322,10 @@ red-green-refactor with tests that cite the requirement ids.
 2. Which single-select label groups exist in the fixture workspace, and whether each
    becomes a column automatically or on request. P1 shows all of them; revisit in P2
    when they become writable.
-3. Whether `linear:sync` in CI moves to the OAuth app's client credentials in this
-   project or in a site-platform follow-up.
+3. Resolved at approval: moving `linear:sync` in CI to the OAuth app's client
+   credentials is site-platform work, tracked as
+   [LIN-22](https://linear.app/sesv/issue/LIN-22) under Production Readiness. It
+   depends on the OAuth app from T2.
 
 ## 9. Decisions
 
