@@ -15,10 +15,12 @@ Status: scaffolding. The first spec, `docs/specs/001-seed.md`, is being implemen
 
 ## Develop
 
-Requires Node 26 (`.nvmrc`) and pnpm 12 (pinned by `packageManager`). Node 26 no longer
-ships corepack; install it once with `npm i -g corepack@0.36.0 && corepack enable`.
+Node and pnpm are pinned in `mise.toml`. With [mise](https://mise.jdx.dev) installed and
+activated in your shell, `mise install` gets the exact versions, verified against
+`mise.lock`; nothing else needs installing by hand.
 
 ```sh
+mise install
 pnpm install
 pnpm dev          # http://localhost:3000
 pnpm check        # lint, typecheck, unit tests, spec checks

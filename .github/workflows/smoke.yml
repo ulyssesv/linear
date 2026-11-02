@@ -31,17 +31,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set up Node from .nvmrc (SEED-R2)
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .nvmrc
-          package-manager-cache: false
-
-      - name: Enable pnpm from packageManager (SEED-R2)
-        run: npm install --global corepack@0.36.0 && corepack enable
-
-      - name: Install (SEED-R2)
-        run: pnpm install --frozen-lockfile
+      - name: Node and pnpm from mise.toml, then install (SEED-R2)
+        uses: ./.github/actions/setup
 
       - name: Install Chromium
         run: pnpm --filter @sesv/web exec playwright install --with-deps chromium

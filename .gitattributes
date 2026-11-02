@@ -10,6 +10,7 @@ docs/**                   review-documentation
 **/e2e/**                 review-test
 **/test/**                review-test
 pnpm-lock.yaml            linguist-generated=true
+mise.lock                 linguist-generated=true
 CHANGELOG.md              linguist-generated=true
 **/routeTree.gen.ts        linguist-generated=true
 CLAUDE.md                 review-agent-guidance

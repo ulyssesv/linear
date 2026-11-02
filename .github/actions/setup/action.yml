@@ -1,0 +1,71 @@
+# Tools from mise.toml, verified against mise.lock, and the pnpm dependencies (SEED-R2).
+# Used by every workflow that runs pnpm, so Node and pnpm are set up in one place.
+name: Setup
+description: Install mise, the tools pinned in mise.toml and, optionally, the pnpm dependencies
+
+inputs:
+  dependencies:
+    description: Run pnpm install with a cached store
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Install mise
+      shell: bash
+      env:
+        # Bump with the checksums of the release's linux-x64 and linux-arm64 binaries.
+        # mise.lock is revision 3, which needs mise 2026.9.16 or later.
+        MISE_VERSION: v2026.9.17
+        SHA256_X64: 63049bc35fb9065e8dc35ac8b25fdae53e9bd6f1885a843aedeba398e046a1ee
+        SHA256_ARM64: ab125726a93a2967e30290ade713a960b9fe8eed0ae0e2fc0976e327b08af70d
+      run: |
+        case "$RUNNER_ARCH" in
+          X64) arch=x64 sha=$SHA256_X64 ;;
+          ARM64) arch=arm64 sha=$SHA256_ARM64 ;;
+          *) echo "::error::no mise binary for $RUNNER_ARCH"; exit 1 ;;
+        esac
+        bin="$RUNNER_TEMP/mise-bin"
+        mkdir -p "$bin"
+        curl -fsSL -o "$bin/mise" "https://github.com/jdx/mise/releases/download/$MISE_VERSION/mise-$MISE_VERSION-linux-$arch"
+        echo "$sha  $bin/mise" | sha256sum --check --strict
+        chmod +x "$bin/mise"
+        echo "$bin" >> "$GITHUB_PATH"
+        echo "$HOME/.local/share/mise/shims" >> "$GITHUB_PATH"
+
+    - name: Cache the mise tools
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.local/share/mise/installs
+        key: mise-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('mise.lock') }}
+
+    - name: Install Node and pnpm from mise.toml (SEED-R2)
+      shell: bash
+      env:
+        # Only for this step: provenance checks call the GitHub API.
+        MISE_GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        mise trust --yes mise.toml
+        mise install --locked
+        mise reshim
+        node --version
+        pnpm --version
+
+    - name: Find the pnpm store
+      if: inputs.dependencies == 'true'
+      id: pnpm
+      shell: bash
+      run: echo "store=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache the pnpm store
+      if: inputs.dependencies == 'true'
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ steps.pnpm.outputs.store }}
+        key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-${{ runner.os }}-
+
+    - name: Install dependencies (SEED-R1)
+      if: inputs.dependencies == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile

@@ -25,7 +25,7 @@ language and framework; the rest was open.
 |---|---|
 | Repository | `ulyssesv/linear`, public, MIT |
 | Layout | pnpm workspace; `apps/web` is the single deployable; `packages/` for code shared by applications; `tools/` for repository tooling |
-| Runtime | Node LTS pinned in `.nvmrc`; pnpm pinned by `packageManager` |
+| Runtime | Node LTS and pnpm pinned in `mise.toml` with checksums in `mise.lock`; `engines` and `packageManager` agree. Was `.nvmrc` with corepack until SEED T15 |
 | Framework | TanStack Start with React, server rendering on by default and disabled per route where needed, built as a plain Node server |
 | UI | Tailwind, shadcn/ui |
 | Lint and format | Biome, single config |
@@ -44,6 +44,12 @@ language and framework; the rest was open.
   build and would need its own base image.
 - Changesets. Needs a file per pull request; Conventional Commits already carry the
   same information.
+- `.nvmrc` with corepack, the first choice. Left every developer to pick a Node by
+  hand, and Node 26 no longer ships corepack, so each machine and workflow needed a
+  separate corepack install. mise installs both pinned versions with one command,
+  verifies them against a lockfile, and runs the same way in CI.
+- `jdx/mise-action` in CI. Works, but it is a third-party action and exports its token
+  to later steps; a pinned mise binary with a checked checksum takes a few lines.
 
 ## Consequences
 
@@ -52,3 +58,6 @@ language and framework; the rest was open.
 - MIT is revisited if HyperFormula (GPLv3) is adopted by the planning sheet.
 - release-please opens a release pull request after each merge to `main`; releases
   happen when that pull request is merged, not on every merge.
+- Developers need mise installed and activated in their shell. A Node version bump
+  touches `mise.toml`, `engines` and the Dockerfile's base image; a pnpm bump touches
+  `mise.toml` and `packageManager`. `mise lock` refreshes the checksums.
