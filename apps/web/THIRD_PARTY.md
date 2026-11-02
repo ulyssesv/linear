@@ -2,8 +2,10 @@
 
 Every font, icon set and library whose code or files the site serves or runs, with its
 licence (CONTENT-R16). `apps/web/test/third-party.test.ts` fails when a runtime
-dependency, a stylesheet package imported by `src/styles.css` or a vendored set below
-is missing here, or when a listed licence is not the one the package declares.
+dependency, a package imported by `src/` (stylesheet imports included) or a vendored set
+below is missing here, or when a listed licence is not the one the package declares.
+Everything is open source except what a demo uses under a licence an accepted decision
+record chooses; that row names the record.
 
 The site carries no Linear logo, logomark, wordmark or icon, and loads no Linear asset.
 It is styled after Linear's public site with the parts below, and its footer says it is
@@ -22,6 +24,13 @@ an independent project.
 | -- | -- | -- | -- |
 | Lucide (icons inlined in `src/components/icons.tsx`) | vendored | ISC | https://lucide.dev |
 | shadcn/ui (components copied into `src/components/ui`) | vendored | MIT | https://ui.shadcn.com |
+
+## Demo libraries under a recorded licence
+
+| Name | Package | Licence | Source |
+| -- | -- | -- | -- |
+| Handsontable (the planning-sheet grid) | `handsontable` | Non-commercial licence, REC-004 | https://handsontable.com |
+| Handsontable React wrapper | `@handsontable/react-wrapper` | Non-commercial licence, REC-004 | https://handsontable.com |
 
 ## Libraries
 

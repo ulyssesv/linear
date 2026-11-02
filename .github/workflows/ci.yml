@@ -67,7 +67,9 @@ jobs:
       - name: Typecheck (SEED-R4)
         run: pnpm typecheck
 
-      - name: Unit tests against the database service (SEED-R25, MIRROR-R8)
+      # Includes apps/web/test/grid-boundary.test.ts, which fails when any module but the
+      # grid adapter imports the grid library (REC-004).
+      - name: Unit tests against the database service, and the single grid importer check (SEED-R25, MIRROR-R8, MIRROR-R22)
         run: pnpm test
 
       - name: Spec checks (SEED-R8, SEED-R9, SEED-R30)

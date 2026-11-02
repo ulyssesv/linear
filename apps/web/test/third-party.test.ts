@@ -34,12 +34,40 @@ const listed = new Map(
   rows.filter((row) => row[1]?.startsWith("`")).map((row) => [row[1]?.slice(1, -1), row[2]]),
 );
 
-/** Packages whose CSS the stylesheet imports: compiled into what the site serves. */
-const stylesheetPackages = [
-  ...readFileSync(join(web, "src", "styles.css"), "utf8").matchAll(/@import "([^"]+)"/g),
-].map(([, spec = ""]) =>
-  (spec.startsWith("@") ? spec.split("/").slice(0, 2) : spec.split("/").slice(0, 1)).join("/"),
+const packageOf = (spec: string) =>
+  (spec.startsWith("@") ? spec.split("/").slice(0, 2) : spec.split("/").slice(0, 1)).join("/");
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) return sourceFiles(path);
+    return /\.(?:tsx?|css)$/.test(entry.name) && !entry.name.endsWith(".gen.ts") ? [path] : [];
+  });
+}
+
+/** Packages the app's source imports, stylesheet imports included: what the site ships. */
+const importedPackages = [
+  ...new Set(
+    sourceFiles(join(web, "src")).flatMap((path) =>
+      [...readFileSync(path, "utf8").matchAll(/(?:from|import) "([^"]+)"/g)]
+        .map(([, spec = ""]) => spec)
+        .filter((spec) => !/^(?:\.|@\/|node:)/.test(spec))
+        .map(packageOf),
+    ),
+  ),
+];
+
+/** A licence outside the open-source set is allowed when an accepted record chooses it. */
+const records = readdirSync(join(web, "..", "..", "docs", "records")).filter((name) =>
+  /^\d{3}-/.test(name),
 );
+function acceptedRecord(licence: string): boolean {
+  const id = /REC-(\d{3})/.exec(licence)?.[1];
+  const file = records.find((name) => name.startsWith(`${id}-`));
+  if (!id || !file) return false;
+  const text = readFileSync(join(web, "..", "..", "docs", "records", file), "utf8");
+  return /^status: accepted$/m.test(text);
+}
 
 const declaredLicence = (name: string): string =>
   (
@@ -49,16 +77,28 @@ const declaredLicence = (name: string): string =>
   ).license;
 
 describe("third-party licences", () => {
-  it("CONTENT-R16 every runtime dependency and stylesheet package is listed", () => {
-    const shipped = new Set([...Object.keys(manifest.dependencies), ...stylesheetPackages]);
-    expect(stylesheetPackages).toContain("@fontsource-variable/inter");
+  it("CONTENT-R16 every runtime dependency and every package the source imports is listed", () => {
+    const shipped = new Set([...Object.keys(manifest.dependencies), ...importedPackages]);
+    expect(importedPackages).toContain("@fontsource-variable/inter");
+    expect(importedPackages).toContain("react");
     for (const name of shipped) expect(listed.has(name), `${name} in THIRD_PARTY.md`).toBe(true);
   });
 
   it("CONTENT-R16 every listed package has the licence it declares, and it is open source", () => {
-    for (const [name, licence] of listed) {
-      expect(openSource.has(licence ?? ""), `${name}: ${licence}`).toBe(true);
+    for (const [name, licence = ""] of listed) {
+      if (acceptedRecord(licence)) continue;
+      expect(openSource.has(licence), `${name}: ${licence}`).toBe(true);
       expect(declaredLicence(name ?? ""), name).toBe(licence);
+    }
+  });
+
+  it("CONTENT-R16 a licence outside open source must cite an accepted record", () => {
+    expect(acceptedRecord("Non-commercial licence, REC-004")).toBe(true);
+    expect(acceptedRecord("Non-commercial licence")).toBe(false);
+    expect(acceptedRecord("Non-commercial licence, REC-999")).toBe(false);
+    const closed = [...listed].filter(([, licence = ""]) => !openSource.has(licence));
+    for (const [name, licence = ""] of closed) {
+      expect(acceptedRecord(licence), `${name}: ${licence}`).toBe(true);
     }
   });
 

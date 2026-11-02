@@ -121,9 +121,11 @@ Non-goals:
   shadcn/ui tokens and components already in the repository. The sign-in page, the
   not-found page and the demo shells use the same layout and styles as content pages.
 - **CONTENT-R16** (check) Every font, icon set and component library the site ships is
-  under an open-source licence, and its licence is listed in `apps/web/THIRD_PARTY.md`.
-  No Linear logo, logomark, wordmark or icon file is in the repository, and no Linear
-  asset is loaded at runtime.
+  under an open-source licence, except a library a demo uses under a licence that an
+  accepted decision record chooses (REC-004 for the planning-sheet grid). Each one is
+  listed with its licence in `apps/web/THIRD_PARTY.md`, and an exception names its
+  record. No Linear logo, logomark, wordmark or icon file is in the repository, and no
+  Linear asset is loaded at runtime.
 - **CONTENT-R17** (e2e) The footer on every page states that the site is an independent
   project not affiliated with or endorsed by Linear, next to the version, commit and
   repository link of SEED-R17.
