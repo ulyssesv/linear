@@ -16,11 +16,21 @@ export type GridIntent =
   /** The full column order after a move, by id. */
   | { type: "reorder"; columnIds: readonly string[] };
 
+/** The sort the sheet applied, which the grid shows on the column's header. */
+export type GridSort = { columnId: string; direction: "asc" | "desc" };
+
 export type GridProps = {
   /** Accessible name of the grid, e.g. "Projects". */
   label: string;
   columns: readonly SheetColumn[];
-  /** The rows to show, in order. Flagged rows render muted with their flags. */
+  /**
+   * The rows to show, in order. The sheet sorts and filters them; the grid never reorders
+   * rows itself, it only reports a header click as a sort intent.
+   */
   rows: readonly SheetRow[];
+  /** Shown as the sort indicator; the rows are already in this order. */
+  sort?: GridSort | null;
+  /** Column ids not drawn. The grid keeps their width and position for when they return. */
+  hiddenColumnIds?: readonly string[];
   onIntent?: (intent: GridIntent) => void;
 };

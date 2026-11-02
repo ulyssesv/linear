@@ -1,35 +1,12 @@
 // The projects and initiatives sheets (MIRROR-R18, MIRROR-R19, MIRROR-R23). `local` project
 // only: each test writes its own mirror rows through e2e/mirror.ts and signs in through
 // e2e/auth.ts; nothing here reaches Linear.
-import type { Locator, Page } from "@playwright/test";
 import { proofsOfConcept, site } from "../src/site.ts";
+import { cell, grid, headers, row } from "./grid.ts";
 import { type E2EMirror, expect, test } from "./mirror.ts";
 
 // Wide enough that every column renders: the grid only draws what is in view.
 test.use({ viewport: { width: 3200, height: 900 } });
-
-/** The grid of a sheet, once it has drawn its rows. */
-async function grid(page: Page, label: string): Promise<Locator> {
-  const region = page.getByRole("region", { name: label });
-  await expect(region.locator(".ht_master tbody td").first()).toBeVisible();
-  return region;
-}
-
-/** The master table's row for an entity name. */
-function row(region: Locator, name: string): Locator {
-  return region.locator(".ht_master tbody tr").filter({
-    has: region.page().locator('td[data-column="name"]', { hasText: name }),
-  });
-}
-
-function cell(rowLocator: Locator, column: string): Locator {
-  return rowLocator.locator(`td[data-column="${column}"]`);
-}
-
-async function headers(region: Locator): Promise<string[]> {
-  const texts = await region.locator(".ht_clone_top thead th .colHeader").allTextContents();
-  return texts.map((text) => text.trim());
-}
 
 /** A small workspace: one team, one lead, a status, a single- and a multi-select group. */
 function projectsFixture(mirror: E2EMirror) {

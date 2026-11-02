@@ -8,17 +8,26 @@
 // plugins listed below are registered; never the formulas plugin (REC-004).
 //
 // The grid's own data is each cell's plain text (cellText), which is what copy puts on the
-// clipboard and what a sort or filter plugin would compare. The renderers draw the rich
-// value from the sheet model instead, found by physical row and column, so the grid's
-// reordering never mixes them up.
+// clipboard. The renderers draw the rich value from the sheet model instead, found by
+// physical row and column, so the grid's reordering never mixes them up.
+//
+// View behaviours (MIRROR-R20, MIRROR-R21): the sheet sorts and filters its rows itself
+// (sheets/view.ts), since plain text would sort dates and priorities wrongly. ColumnSorting
+// is registered for its header affordance only: a header click or Enter on a header
+// becomes a sort intent and the plugin's own sort is cancelled; the indicator follows the
+// `sort` prop. HiddenColumns draws `hiddenColumnIds` away while keeping each column's
+// width and place. Keyboard navigation, the frozen first column, resize and reorder are
+// the grid's own.
 import { HotTable, type HotTableRef } from "@handsontable/react-wrapper";
 import type Handsontable from "handsontable/base";
+import { ColumnSorting } from "handsontable/plugins/columnSorting";
 import { CopyPaste } from "handsontable/plugins/copyPaste";
+import { HiddenColumns } from "handsontable/plugins/hiddenColumns";
 import { ManualColumnMove } from "handsontable/plugins/manualColumnMove";
 import { ManualColumnResize } from "handsontable/plugins/manualColumnResize";
 import { registerPlugin } from "handsontable/plugins/registry";
 import { baseRenderer } from "handsontable/renderers/baseRenderer";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import "handsontable/styles/handsontable.min.css";
 import "handsontable/styles/ht-theme-main.min.css";
 import "./grid-theme.css";
@@ -26,9 +35,16 @@ import { type CellShape, cellText, type SheetColumn, type SheetRow } from "../mo
 import { cellContent } from "./cells.ts";
 import type { GridProps } from "./types.ts";
 
+registerPlugin(ColumnSorting);
 registerPlugin(CopyPaste);
+registerPlugin(HiddenColumns);
 registerPlugin(ManualColumnMove);
 registerPlugin(ManualColumnResize);
+
+/** Sort from the header, cycling ascending, descending, none; the sheet does the sorting. */
+const columnSorting = { headerAction: true, indicator: true, sortEmptyCells: true };
+
+type SortConfig = { column: number; sortOrder: "asc" | "desc" };
 
 /** The vendor's non-commercial key; this site is a non-commercial demonstration (REC-004). */
 const licenseKey = "non-commercial-and-evaluation";
@@ -81,7 +97,14 @@ function rendererFor(model: { current: Model }): Handsontable.renderers.BaseRend
   };
 }
 
-export default function HandsontableGrid({ label, columns, rows, onIntent }: GridProps) {
+export default function HandsontableGrid({
+  label,
+  columns,
+  rows,
+  sort = null,
+  hiddenColumnIds = [],
+  onIntent,
+}: GridProps) {
   const hot = useRef<HotTableRef>(null);
   const model = useRef<Model>({ columns, rows });
   model.current = { columns, rows };
@@ -108,6 +131,42 @@ export default function HandsontableGrid({ label, columns, rows, onIntent }: Gri
     const physical = instance ? instance.toPhysicalColumn(visual) : visual;
     return model.current.columns[physical]?.id;
   }, []);
+
+  const hiddenKey = hiddenColumnIds.join("\n");
+  const hiddenColumns = useMemo(() => {
+    const hidden = new Set(hiddenKey ? hiddenKey.split("\n") : []);
+    const physical = columns.flatMap((column, index) => (hidden.has(column.id) ? [index] : []));
+    return { columns: physical, indicators: false, copyPasteEnabled: false };
+  }, [columns, hiddenKey]);
+
+  // The indicator follows the sheet's sort after every update, in visual columns, which a
+  // column move changes.
+  useEffect(() => {
+    const instance = hot.current?.hotInstance;
+    if (!instance || instance.isDestroyed) return;
+    const physical = sort ? columns.findIndex((column) => column.id === sort.columnId) : -1;
+    const config: SortConfig[] =
+      sort && physical >= 0
+        ? [{ column: instance.toVisualColumn(physical), sortOrder: sort.direction }]
+        : [];
+    instance.getPlugin("columnSorting").setSortConfig(config);
+    instance.render();
+  });
+
+  const beforeColumnSort = useCallback(
+    (current: SortConfig[], destination: SortConfig[]): boolean => {
+      const next = destination[0];
+      const previous = current[0];
+      const target = next ?? previous;
+      const columnId = target ? columnIdAt(target.column) : undefined;
+      if (columnId) {
+        intent.current?.({ type: "sort", columnId, direction: next ? next.sortOrder : null });
+      }
+      // The sheet orders the rows; the plugin's own sort would compare plain text.
+      return false;
+    },
+    [columnIdAt],
+  );
 
   return (
     <section className="sheet-grid" aria-label={label}>
@@ -146,7 +205,10 @@ export default function HandsontableGrid({ label, columns, rows, onIntent }: Gri
         beforeCreateCol={() => false}
         beforeRemoveRow={() => false}
         beforeRemoveCol={() => false}
-        // View-level column changes become intents; P1 persists none of them.
+        // View-level changes become intents; P1 persists none of them (MIRROR-R20).
+        columnSorting={columnSorting}
+        beforeColumnSort={beforeColumnSort}
+        hiddenColumns={hiddenColumns}
         manualColumnResize
         manualColumnMove
         afterColumnResize={(width: number, visual: number) => {

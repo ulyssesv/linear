@@ -23,7 +23,13 @@ export default defineConfig({
   projects: [
     {
       name: "local",
-      testMatch: ["site.spec.ts", "database.spec.ts", "auth.spec.ts", "sheets.spec.ts"],
+      testMatch: [
+        "site.spec.ts",
+        "database.spec.ts",
+        "auth.spec.ts",
+        "sheets.spec.ts",
+        "sheet-behaviours.spec.ts",
+      ],
       use: { baseURL: `http://localhost:${port}` },
     },
     {

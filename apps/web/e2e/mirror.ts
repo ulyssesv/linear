@@ -11,7 +11,7 @@
 //   });
 import { randomBytes } from "node:crypto";
 import postgres from "postgres";
-import { applyRecords, markRemoved } from "../src/server/mirror/apply.ts";
+import { applyRecords, markRemoved, recordSyncRun } from "../src/server/mirror/apply.ts";
 import { tables } from "../src/server/mirror/tables.ts";
 import {
   type Initiative,
@@ -22,6 +22,7 @@ import {
   type Project,
   type ProjectLabel,
   type ProjectStatus,
+  type SyncSource,
   type Team,
   type User,
 } from "../src/server/mirror/types.ts";
@@ -41,7 +42,12 @@ export type E2EMirror = {
   id(local: string): string;
   /** A unique name for this test that sorts first: `000 <suffix> <local>`. */
   name(local: string): string;
-  write(records: MirrorWrite): Promise<void>;
+  /**
+   * Writes as `source` (bootstrap by default). With `run`, also records the write in the
+   * sync log as that feeder's run, as a reconcile pass does in its transaction; the log
+   * row is removed after the test.
+   */
+  write(records: MirrorWrite, options?: { source?: SyncSource; run?: boolean }): Promise<void>;
   team(local: string, options?: Partial<Team>): Team;
   user(local: string, options?: Partial<User>): User;
   projectStatus(local: string, options?: Partial<ProjectStatus>): ProjectStatus;
@@ -51,7 +57,9 @@ export type E2EMirror = {
   initiative(local: string, options?: Partial<Initiative>): Initiative;
 };
 
-function createMirror(written: Map<MirrorType, Set<string>>): E2EMirror {
+type Written = { rows: Map<MirrorType, Set<string>>; runs: Set<string> };
+
+function createMirror({ rows: written, runs }: Written): E2EMirror {
   const suffix = randomBytes(4).toString("hex");
   const id = (local: string) => `e2e-${suffix}-${local}`;
   const name = (local: string) => `000 ${suffix} ${local}`;
@@ -60,26 +68,41 @@ function createMirror(written: Map<MirrorType, Set<string>>): E2EMirror {
   const mirror: E2EMirror = {
     id,
     name,
-    async write(input) {
+    async write(input, options = {}) {
       const records = { ...input };
       const needsTeam = records.projects?.some((p) => p.teamIds.includes(defaultTeamId));
       if (needsTeam && !written.get("teams")?.has(defaultTeamId)) {
         records.teams = [mirror.team("team"), ...(records.teams ?? [])];
       }
       const sql = postgres(e2eDatabaseUrl, { max: 1, onnotice: () => {} });
-      const context = { source: "bootstrap" as const, at: new Date() };
+      const context = { source: options.source ?? ("bootstrap" as const), at: new Date() };
       try {
-        for (const type of mirrorTypes) {
-          const list = records[type] as MirrorRecords[typeof type][] | undefined;
-          if (!list?.length) continue;
-          const ids = written.get(type) ?? new Set<string>();
-          for (const record of list) ids.add(record.id);
-          written.set(type, ids);
-          await applyRecords(sql, type, list, context);
-        }
-        for (const [type, ids] of Object.entries(records.removed ?? {})) {
-          await markRemoved(sql, type as MirrorType, ids ?? [], context);
-        }
+        await sql.begin(async (tx) => {
+          let changed = 0;
+          for (const type of mirrorTypes) {
+            const list = records[type] as MirrorRecords[typeof type][] | undefined;
+            if (!list?.length) continue;
+            const ids = written.get(type) ?? new Set<string>();
+            for (const record of list) ids.add(record.id);
+            written.set(type, ids);
+            const counts = await applyRecords(tx, type, list, context);
+            changed += counts.inserted + counts.updated;
+          }
+          for (const [type, ids] of Object.entries(records.removed ?? {})) {
+            changed += await markRemoved(tx, type as MirrorType, ids ?? [], context);
+          }
+          if (options.run) {
+            runs.add(suffix);
+            await recordSyncRun(tx, {
+              source: context.source,
+              startedAt: context.at,
+              finishedAt: new Date(),
+              outcome: "ok",
+              changed,
+              counts: { e2e: suffix },
+            });
+          }
+        });
       } finally {
         await sql.end({ timeout: 5 });
       }
@@ -182,12 +205,15 @@ function createMirror(written: Map<MirrorType, Set<string>>): E2EMirror {
 }
 
 /** Deletes what a test wrote. Test cleanup only; the server never deletes mirror rows. */
-async function removeWritten(written: Map<MirrorType, Set<string>>): Promise<void> {
-  if (written.size === 0) return;
+async function removeWritten({ rows, runs }: Written): Promise<void> {
+  if (rows.size === 0 && runs.size === 0) return;
   const sql = postgres(e2eDatabaseUrl, { max: 1, onnotice: () => {} });
   try {
-    for (const [type, ids] of written) {
+    for (const [type, ids] of rows) {
       await sql`delete from ${sql(tables[type].table)} where id = any(${[...ids]})`;
+    }
+    if (runs.size > 0) {
+      await sql`delete from ${sql("mirror_sync_log")} where counts->>'e2e' = any(${[...runs]})`;
     }
   } finally {
     await sql.end({ timeout: 5 });
@@ -198,7 +224,7 @@ async function removeWritten(written: Map<MirrorType, Set<string>>): Promise<voi
 export const test = base.extend<{ mirror: E2EMirror }>({
   // biome-ignore lint/correctness/noEmptyPattern: Playwright fixtures take an object pattern
   mirror: async ({}, use) => {
-    const written = new Map<MirrorType, Set<string>>();
+    const written: Written = { rows: new Map(), runs: new Set() };
     await use(createMirror(written));
     await removeWritten(written);
   },
