@@ -11,8 +11,8 @@ export const navigation = [
   { href: "/planning-sheet", label: "Planning sheet" },
   { href: "/metrics-rollup", label: "Metrics rollup" },
   { href: "/ai-sdlc", label: "AI SDLC" },
-  { href: "/this-site", label: "This site" },
-  { href: "/about", label: "About" },
+  { href: "/this-site", label: "About this site" },
+  { href: "/about", label: "About me" },
 ] as const;
 
 /**

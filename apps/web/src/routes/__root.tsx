@@ -46,7 +46,7 @@ export const Route = createRootRoute({
       },
       {
         name: "description",
-        content: "Proofs of concept and documentation for proposals to Linear.",
+        content: "A cover letter to Linear: ideas and experiments, built in the open.",
       },
     ],
     links: [{ rel: "stylesheet", href: styles }],

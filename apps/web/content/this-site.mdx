@@ -1,13 +1,18 @@
 export const meta = {
-  title: "This site",
-  description: "How linear.sesv.co is built, delivered and developed, including how AI is used.",
+  title: "About this site",
+  description:
+    "How linear.sesv.co is built, where it runs, how it is delivered and developed, and how AI is used.",
 };
+
+{/* The landing page shows this summary in its section about this site (CONTENT-R11). */}
+export const summary =
+  "This site is its own example. The specs and decision records in the repository are the source of truth, Linear tracks the work and mirrors the documents, and the code is written in sessions with an AI coding agent that follows the same loop.";
 
 This site is one web application, built from specs and decision records kept in
 [the repository](https://github.com/ulyssesv/linear), with Linear tracking the work. The
 process that builds it is meant to show what the [AI SDLC](/ai-sdlc) proposal describes,
-applied to the site itself. This page explains the stack, how a change reaches production, how the
-work is planned and tracked, and where AI fits in.
+applied to the site itself. This page explains the stack, where the site runs, how a change
+reaches production, how the work is planned and tracked, and where AI fits in.
 
 <h2 id="stack">How it is built</h2>
 
@@ -33,6 +38,29 @@ runs end-to-end tests. The repository prefers no new dependency over a small
 convenience. The choices and the alternatives considered are in
 [REC-003](https://github.com/ulyssesv/linear/blob/main/docs/records/003-repo-shape-and-toolchain.md).
 
+<h2 id="hosting">Self-hosted</h2>
+
+This site doesn't run on a cloud platform. It runs on a server at home.
+
+<Figure image="rack" caption="The rack this site runs on." />
+
+- **Hardware:** Proxmox hypervisor on a UniFi network
+- **Cluster:** single-node Kubernetes on Talos Linux (immutable, API-only OS)
+- **Deploys:** GitOps with Argo CD, synced from a Git repo
+- **Edge:** Traefik with Let's Encrypt TLS (Cloudflare DNS-01), no CDN in front
+- **Runtime:** one stateless container, non-root, read-only root filesystem
+
+### How a release ships
+
+1. A tag here builds the image and publishes it to GHCR, pinned by digest.
+2. A one-line commit in the infra repo bumps that digest.
+3. Argo CD rolls it out. The old pod keeps serving until the new one is ready.
+4. A smoke test on a GitHub runner checks from the public internet that the live commit
+   matches the release.
+
+> Every change, from DNS records to this container, is declared in Git.
+> No `kubectl apply`, no SSH-and-pray.
+
 <h2 id="delivery">How it is released and deployed</h2>
 
 Every pull request runs the same CI: lint, typecheck, unit tests against a Postgres
@@ -49,14 +77,12 @@ with the next version and changelog. Merging it tags the release. A workflow the
 the image, runs the same container checks, and publishes it to the GitHub Container
 Registry with its digest in the release notes.
 
-The site runs on a single-node Kubernetes cluster at home, managed through Argo CD from a
-separate infra repository. This repository ships only the image and a written contract:
-port, probes, environment variables, security context and resource hints, in
-[`docs/deploy.md`](https://github.com/ulyssesv/linear/blob/main/docs/deploy.md). A deploy is two commits: the release tag here, and a change in the infra
-repository that pins the new image digest. Database migrations run as a job before each
-rollout. After a deploy, a smoke workflow, started by hand, checks the public site and
-confirms it serves the released commit. There are no preview environments per pull request, which
-is why CI tests the built server and the container itself. [REC-002](https://github.com/ulyssesv/linear/blob/main/docs/records/002-homelab-gitops-deployment.md)
+The infra repository owns the cluster described [above](#hosting). This repository ships
+only the image and a written contract: port, probes, environment variables, security
+context and resource hints, in
+[`docs/deploy.md`](https://github.com/ulyssesv/linear/blob/main/docs/deploy.md).
+Database migrations run as a job before each rollout. There are no preview environments
+per pull request, which is why CI tests the built server and the container itself. [REC-002](https://github.com/ulyssesv/linear/blob/main/docs/records/002-homelab-gitops-deployment.md)
 records why the site is deployed this way.
 
 <h2 id="process">Specs, records and the Linear loop</h2>

@@ -8,7 +8,7 @@ import type { Theme } from "@/theme";
 
 // The header of every page, public or demo (CONTENT-R3): the site name, the navigation
 // with the current page marked, the theme control (CONTENT-R18) and the account control.
-// Server-rendered and usable without JavaScript: below the small breakpoint the
+// Server-rendered and usable without JavaScript: below the large breakpoint (1024px) the
 // navigation folds into a <details> menu (CONTENT-R6), and sign-out and the theme are
 // plain form POSTs.
 export function SiteHeader({
@@ -35,16 +35,16 @@ export function SiteHeader({
           {site.name}
         </SiteLink>
 
-        <nav aria-label="Main" className="hidden flex-1 sm:block">
+        <nav aria-label="Main" className="hidden flex-1 lg:block">
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1">{links}</ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 sm:ml-0">
+        <div className="ml-auto flex items-center gap-3 lg:ml-0">
           <div data-slot="theme">
             <ThemeControl theme={theme} href={href} />
           </div>
           <AccountControl user={user} href={href} />
-          <details className="group relative sm:hidden">
+          <details className="group relative lg:hidden">
             <summary
               aria-label="Menu"
               className="grid size-7 cursor-pointer list-none place-items-center rounded-md border text-muted-foreground hover:text-foreground group-open:bg-accent group-open:text-foreground [&::-webkit-details-marker]:hidden"
@@ -72,7 +72,7 @@ function NavLinks({ pathname }: Readonly<{ pathname: string }>) {
         <SiteLink
           href={item.href}
           aria-current={current ? "page" : undefined}
-          className="block rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-0 sm:py-1"
+          className="block rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground lg:px-0 lg:py-1"
         >
           {item.label}
         </SiteLink>

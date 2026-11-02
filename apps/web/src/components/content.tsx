@@ -1,9 +1,11 @@
 import type { ComponentProps, ReactNode } from "react";
 import { ArrowRightIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
+import { Photo } from "@/components/photo";
 import { SiteLink } from "@/components/site-link";
 import { Badge } from "@/components/ui/badge";
 import { useViewer } from "@/components/viewer";
+import { type ImageName, images } from "@/images";
 import {
   type ContentMeta,
   type InitiativeStatus,
@@ -66,8 +68,21 @@ export function Callout({ title, children }: Readonly<{ title?: string; children
   );
 }
 
+/** A photo in the copy, by its name in src/images.ts, with an optional caption
+ * (CONTENT-R22). It spans the prose column. */
+export function Figure({ image, caption }: Readonly<{ image: ImageName; caption?: ReactNode }>) {
+  return (
+    <figure data-figure className="not-prose my-8">
+      <Photo image={images[image]} sizes="(min-width: 48rem) 42rem, calc(100vw - 3rem)" />
+      {caption ? (
+        <figcaption className="mt-2 text-muted-foreground text-sm">{caption}</figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
 /** The fixed set of site components content files can use (CONTENT-R9). */
-export const contentComponents = { DemoLink, Callout } satisfies MDXComponents;
+export const contentComponents = { DemoLink, Callout, Figure } satisfies MDXComponents;
 
 /** What content renders with: the site components, and links between pages that go
  * through the router (CONTENT-R21). */
@@ -88,19 +103,31 @@ export function StatusLabel({ status }: Readonly<{ status: InitiativeStatus }>) 
 
 /**
  * One content page: the title from `meta`, the status label when `meta` is an
- * initiative's (CONTENT-R12), then the file in the shared prose style.
+ * initiative's (CONTENT-R12), then the file in the shared prose style. An `aside`, such as
+ * the photo on /about, sits in a narrow column beside the prose, and above it on a phone.
  */
 export function ContentPage({
   meta,
   Content,
-}: Readonly<{ meta: ContentMeta; Content: MDXContent }>) {
+  aside,
+}: Readonly<{ meta: ContentMeta; Content: MDXContent; aside?: ReactNode }>) {
+  const article = (
+    <article className="prose">
+      <h1>{meta.title}</h1>
+      {isInitiativeMeta(meta) ? <StatusLabel status={meta.status} /> : null}
+      <Content components={mdxComponents} />
+    </article>
+  );
   return (
     <PageContainer>
-      <article className="prose">
-        <h1>{meta.title}</h1>
-        {isInitiativeMeta(meta) ? <StatusLabel status={meta.status} /> : null}
-        <Content components={mdxComponents} />
-      </article>
+      {aside ? (
+        <div className="grid gap-8 md:grid-cols-[minmax(0,42rem)_11rem] md:gap-14">
+          {article}
+          <aside className="order-first w-28 md:order-none md:w-auto md:pt-2">{aside}</aside>
+        </div>
+      ) : (
+        article
+      )}
     </PageContainer>
   );
 }

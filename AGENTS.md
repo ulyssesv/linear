@@ -34,7 +34,10 @@ flows from Linear into files automatically.
   `apps/web/src/components/content.tsx`, which also holds the components copy may use.
   Every page sits in the shell of `routes/__root.tsx`: header, `<main>`, footer. Links
   between pages use `SiteLink` (`components/site-link.tsx`), which navigates without
-  reloading the document; MDX links get it automatically.
+  reloading the document; MDX links get it automatically. Photos are WebP files under
+  `apps/web/content/images`, one per width (`name-<width>.webp`, made with `cwebp`),
+  registered in `src/images.ts` and shown with `Photo`, or `<Figure image="name" />` in
+  copy; a test enforces the format, the size budget and the declared sizes.
 - `apps/web/THIRD_PARTY.md`: every font, icon set and library the site ships, with its
   licence. A test fails when a runtime dependency or a package imported by `styles.css`
   is missing there. Fonts are self-hosted from `@fontsource-variable` packages; icons are

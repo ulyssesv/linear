@@ -100,22 +100,24 @@ Non-goals:
 
 ### Pages
 
-- **CONTENT-R11** (e2e) The landing page shows: the site name and a short purpose; one
-  card per initiative with its title, a one-line summary, a status label and a link to
-  its page; a section about this site linking to `/this-site`; a short excerpt about the
-  author linking to `/about`; and the footer.
+- **CONTENT-R11** (e2e) The landing page shows: a hero with the page's title and a short
+  purpose (the site name stays in the header); one card per initiative with its title, a
+  one-line summary, a status label and a link to its page; a section about this site with
+  the summary `/this-site` exports, linking to it; the author's photo and a short excerpt
+  about the author, linking to `/about`; and the footer.
 - **CONTENT-R12** (e2e) Each initiative page shows its title, status, the problem and the
   proposal, a demo section, and links to its Linear initiative and to its specs and
   records in the repository. The demo section either links to the demo, saying that it
   needs sign-in with a Linear account of the workspace when the visitor is anonymous, or
   says that no demo is available yet and links nowhere. The planning-sheet page's demo
   section links to `/sheets`.
-- **CONTENT-R13** (e2e) `/this-site` has four sections with stable anchors: `#stack`
-  (how it is built), `#delivery` (how it is released and deployed), `#process` (specs,
-  records and the Linear loop) and `#ai` (how AI is used in the work). It links to the
+- **CONTENT-R13** (e2e) `/this-site` has five sections with stable anchors: `#stack`
+  (how it is built), `#hosting` (where it runs, with a photo of the hardware),
+  `#delivery` (how it is released and deployed), `#process` (specs, records and the
+  Linear loop) and `#ai` (how AI is used in the work). It links to the
   repository, `docs/specs`, `docs/records` and `AGENTS.md`.
-- **CONTENT-R14** (e2e) `/about` shows the author's name, a short biography and contact
-  links, with any email address shown as text. The landing excerpt and the about page
+- **CONTENT-R14** (e2e) `/about` shows the author's name, a photo beside the text, a short
+  biography and contact links, with any email address shown as text. The landing excerpt and the about page
   read the excerpt from the same source, so they cannot drift.
 
 ### Look
@@ -143,17 +145,23 @@ Non-goals:
 - **CONTENT-R20** (manual) Text and controls meet WCAG 2.2 AA contrast in both themes,
   every interactive element has a visible focus state, and every page can be used with
   the keyboard alone.
+- **CONTENT-R22** (unit) Every photo the site shows is committed as WebP under
+  `apps/web/content/images`, one file per width its layout needs, none over 100 KB, and
+  no unconverted image (PNG, JPEG and the like) is left under `apps/web`. A photo is
+  rendered with a `srcset` that lists exactly those widths, `width` and `height` of its
+  largest file, alt text and a small inline placeholder, and loads lazily unless it is on
+  the first screen. Added in T8.
 
 ## 4. Pages
 
 | Path | Page | Required parts | Draft source |
 |---|---|---|---|
-| `/` | Landing | Purpose, initiative cards, this-site section, about excerpt | `site.ts`, initiative summaries |
+| `/` | Landing | Hero (title, purpose), initiative cards under "Ideas & Experiments", this-site section, author photo and excerpt | The author, initiative summaries |
 | `/planning-sheet` | Planning sheet | Problem, proposal, status, demo (`/sheets`), links | SPEC-002, REC-004, REC-005 |
 | `/metrics-rollup` | Metrics rollup | Problem, proposal, status, demo (none yet), links | Initiative description |
 | `/ai-sdlc` | AI SDLC | Problem, proposal, status, demo (none yet), links | Initiative description, REC-001 |
-| `/this-site` | This site | `#stack`, `#delivery`, `#process`, `#ai`, repository links | AGENTS.md, SPEC-001, REC-002, REC-003, `docs/deploy.md` |
-| `/about` | About | Name, biography, contact links | The author |
+| `/this-site` | About this site | `#stack`, `#hosting`, `#delivery`, `#process`, `#ai`, repository links | AGENTS.md, SPEC-001, REC-002, REC-003, `docs/deploy.md`, the author |
+| `/about` | About me | Name, photo, biography, contact links | The author |
 
 The initiative's status label is one of Planned, In progress or Live, kept in the page's
 `meta` and changed by hand. The planning sheet starts as In progress, the other two as
@@ -221,8 +229,16 @@ gets it as its `a` element, so links written in prose behave the same. Server en
 The router still renders an `<a href>`, so without JavaScript nothing changes
 (CONTENT-R21).
 
+**Photos.** Sources are converted once, by hand, with `cwebp`, and only the results are
+committed; no image tooling enters the build. `src/images.ts` names each photo with its
+widths, intrinsic size, alt text and a tiny WebP placeholder inlined as a data URL, which
+the browser upscales into a blur behind the image until it loads. `Photo` renders one;
+copy uses it through `Figure`. A unit test reads each file's real size from its WebP
+header, so the `srcset` and the reserved space cannot drift from the files (CONTENT-R22).
+
 **Navigation on small screens.** A `<details>`/`<summary>` menu collapses the navigation
-below the small breakpoint, which keeps it usable without JavaScript (CONTENT-R6).
+below the large breakpoint (1024 pixels, where the five labels and the account control
+stop fitting on one row), which keeps it usable without JavaScript (CONTENT-R6).
 
 ## 6. Validation
 
@@ -258,13 +274,16 @@ styling so content is written against the real look, then the pages.
 - [ ] T5 This site page (R13)
 - [ ] T6 About page (R14)
 - [ ] T7 Client-side navigation between site pages (R21)
+- [ ] T8 Landing hero, Ideas & Experiments, page labels, self-hosted section and photos
+      (R11, R13, R14, R22)
 
 ## 8. Open questions
 
 1. Resolved at approval: the page about the site lives at `/this-site`.
 2. Resolved at approval: the about page has no photo. T6 ships placeholder text for the
    biography, marked as such; the author writes it later through ordinary copy changes.
-   Contact links are chosen in T6.
+   Contact links are chosen in T6. Revised in T8: the author supplied a photo, shown on
+   `/about` and next to the landing excerpt.
 3. Resolved at approval: the monospace face, JetBrains Mono or Geist Mono, is picked in
    T2 on visual grounds.
 4. Resolved at approval: listing the specs and records with their statuses on
@@ -279,6 +298,11 @@ styling so content is written against the real look, then the pages.
 - Demos keep their own paths; initiative pages link to them.
 - Theme follows the system with a cookie-backed override applied on the server.
 - Demo access stays as REC-005 decides.
+- T8, 2026-11-02: the landing title is "Cover Letter to Linear", with "Linear" set in the
+  site's own type. An inline Linear logo was considered and rejected: CONTENT-R16 keeps
+  Linear's marks out of the repository, and Linear's brand page forbids combining them
+  with other graphics. The cards sit under "Ideas & Experiments" rather than
+  "Proposals"; the navigation reads "About this site" and "About me".
 - CONTENT-R16 amended on 2026-11-02, during T2: as approved it required everything the
   site ships to be open source, but MIRROR T7 had already shipped Handsontable under the
   non-commercial licence that REC-004 accepted. The requirement now allows a demo library

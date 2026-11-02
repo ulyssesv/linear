@@ -19,7 +19,10 @@ const user = { id: "u1", name: "Ada Lovelace", email: "ada@example.com" };
 
 describe("content files", () => {
   it("CONTENT-R8 every page's copy is an MDX file under apps/web/content", () => {
-    const onDisk = readdirSync(contentDir).filter((name) => !name.startsWith("."));
+    // Files only: content/images holds the photos the copy shows (CONTENT-R22).
+    const onDisk = readdirSync(contentDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && !entry.name.startsWith("."))
+      .map((entry) => entry.name);
     expect(onDisk.length).toBeGreaterThan(0);
     expect(onDisk.every((name) => name.endsWith(".mdx"))).toBe(true);
     expect(files.map((file) => file.name).sort()).toEqual(onDisk.sort());
@@ -44,7 +47,7 @@ describe("content files", () => {
 
 describe("site components", () => {
   it("CONTENT-R9 content can use the demo link and the callout", () => {
-    expect(Object.keys(contentComponents).sort()).toEqual(["Callout", "DemoLink"]);
+    expect(Object.keys(contentComponents).sort()).toEqual(["Callout", "DemoLink", "Figure"]);
     const html = renderToStaticMarkup(<ContentPage meta={fixtureMeta} Content={Fixture} />);
     expect(html).toContain("data-callout");
     expect(html).toContain("Heads up");

@@ -12,8 +12,7 @@ const contentPages = Object.entries(modules).map(([file, module]) => {
   const name = file.replace("../content/", "").replace(/\.mdx$/, "");
   return { path: name === "landing" ? "/" : `/${name}`, meta: module.meta };
 });
-const titleOf = (path: string, title: string) =>
-  path === "/" ? escapeHtml(title) : `${escapeHtml(title)} · ${site.name}`;
+const titleOf = (title: string) => `${escapeHtml(title)} · ${site.name}`;
 
 type Fetch = (request: Request) => Promise<Response>;
 let fetchPage: Fetch;
@@ -56,7 +55,7 @@ describe("public pages", () => {
     async ({ path, meta }) => {
       const { page } = await get(path);
       expect(page.match(/<title>/g)).toHaveLength(1);
-      expect(page).toContain(`<title>${titleOf(path, meta.title)}</title>`);
+      expect(page).toContain(`<title>${titleOf(meta.title)}</title>`);
       expect(page.match(/<meta name="description"/g)).toHaveLength(1);
       expect(page).toContain(`<meta name="description" content="${escapeHtml(meta.description)}"`);
     },
