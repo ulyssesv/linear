@@ -1,7 +1,7 @@
 ---
 id: CONTENT
 title: Site content, information architecture and look
-status: draft
+status: approved
 area: site-platform
 linear:
   initiative: https://linear.app/sesv/initiative/site-platform-6ac5ff8c3199
@@ -187,7 +187,11 @@ form and lands there when the path is public.
 SEED-R17 (cards now link to initiative pages; the Linear links move onto those pages)
 and CONTENT-R15 and CONTENT-R18 replace SEED-R19. The task that lands each change marks
 the SEED line `dropped` with a pointer here and moves its test citations. SEED-R17's
-footer clause carries over unchanged into CONTENT-R17.
+footer clause carries over unchanged into CONTENT-R17. MIRROR-R26, still open in
+[LIN-32](https://linear.app/sesv/issue/LIN-32), asks for the planning-sheet card to read
+"In progress" and link to the sheets. Under CONTENT-R11 the card links to
+`/planning-sheet`, whose demo section links to the sheets; T3 rewords MIRROR-R26 to say
+so, with the author's agreement, and keeps its test citation.
 
 **Navigation on small screens.** A `<details>`/`<summary>` menu collapses the navigation
 below the small breakpoint, which keeps it usable without JavaScript (CONTENT-R6).
@@ -227,14 +231,15 @@ styling so content is written against the real look, then the pages.
 
 ## 8. Open questions
 
-1. Path for the page about the site: `/this-site` is the working name. Alternatives are
-   `/colophon` or `/how-it-is-built`.
-2. About page: which contact links (GitHub, LinkedIn, email, others) and whether to
-   include a photo. The biography itself comes from the author.
-3. Monospace face: JetBrains Mono or Geist Mono. Both are OFL; the choice is visual and
-   is made in T2.
-4. Whether `/this-site` should later list the specs and records with their statuses,
-   read from `docs/` at build time, as a live view of the process. Not in this spec.
+1. Resolved at approval: the page about the site lives at `/this-site`.
+2. Resolved at approval: the about page has no photo. T6 ships placeholder text for the
+   biography, marked as such; the author writes it later through ordinary copy changes.
+   Contact links are chosen in T6.
+3. Resolved at approval: the monospace face, JetBrains Mono or Geist Mono, is picked in
+   T2 on visual grounds.
+4. Resolved at approval: listing the specs and records with their statuses on
+   `/this-site`, read from `docs/` at build time, is a follow-up outside this spec's
+   tasks, tracked as [LIN-33](https://linear.app/sesv/issue/LIN-33).
 
 ## 9. Decisions
 
