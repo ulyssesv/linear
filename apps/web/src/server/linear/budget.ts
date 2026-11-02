@@ -1,4 +1,5 @@
-// Request and complexity budget of a bootstrap (MIRROR-R4).
+// Request and complexity budget of a bootstrap (MIRROR-R4) and of a reconcile pass
+// (MIRROR-R13).
 //
 // Linear's hourly limits for an OAuth app, which covers the client-credentials app actor
 // (https://linear.app/developers/rate-limiting, read 2026-11-02): 5,000 requests and
@@ -36,6 +37,22 @@
 // reconcile in the same hour has room. Labels come as the scalar `labelIds`, not a
 // connection. Nested connections are capped at 25 or 50 entries; an entity with more (a
 // project in over 25 teams) is truncated there and needs its own follow-up page.
+//
+// A reconcile pass (../mirror/reconcile.ts, reconcilePlan below) lists the reference data
+// in full like the bootstrap, projects and initiatives changed since the last pass with
+// the bootstrap's node shapes, and the ids of every project and initiative, 250 a page,
+// to find removals. For the fixture workspace with up to 50 changed projects and 50
+// changed initiatives since the last pass:
+//
+//   reference data    5 requests, as above                                  =  1,310
+//   changed           1 projects page + 1 initiatives page                  =  6,129
+//   id page           250 x (1 + 2 x 0.1) + 1.2, rounded up                 =    302
+//   ids               ceil(300 / 250) + ceil(60 / 250) = 3 pages x 302      =    906
+//   one pass          10 requests                                           =  8,345
+//
+// The app token is persisted (app-token-store.ts), so a pass costs no token request. Every
+// ten minutes that is 60 requests and about 50,000 points an hour: 1.2% and 2.5% of the
+// budget, leaving the rest to webhooks' follow-ups, the sign-in and a bootstrap.
 
 export const appActorHourlyBudget = {
   requests: 5_000,
@@ -126,21 +143,64 @@ export type BootstrapEstimate = {
   maxQueryComplexity: number;
 };
 
+/** Requests and points of listing each plan through `count` nodes. */
+function estimatePages(pages: readonly (readonly [EntityPlan, number])[]): BootstrapEstimate {
+  let requests = 0;
+  let complexity = 0;
+  let maxQueryComplexity = 0;
+  for (const [{ pageSize, node }, count] of pages) {
+    // An empty listing still costs the one request that finds it empty.
+    const n = Math.max(1, Math.ceil(count / pageSize));
+    const perPage = pageComplexity(pageSize, node);
+    requests += n;
+    complexity += n * perPage;
+    maxQueryComplexity = Math.max(maxQueryComplexity, perPage);
+  }
+  return { requests, complexity, maxQueryComplexity };
+}
+
 /** Requests and points a bootstrap of a workspace with these entity counts costs. */
 export function estimateBootstrap(
   counts: Record<EntityType, number>,
   plan: Record<EntityType, EntityPlan> = bootstrapPlan,
 ): BootstrapEstimate {
-  let requests = 0;
-  let complexity = 0;
-  let maxQueryComplexity = 0;
-  for (const [type, { pageSize, node }] of Object.entries(plan) as [EntityType, EntityPlan][]) {
-    // An empty type still costs the one request that finds it empty.
-    const pages = Math.max(1, Math.ceil(counts[type] / pageSize));
-    const perPage = pageComplexity(pageSize, node);
-    requests += pages;
-    complexity += pages * perPage;
-    maxQueryComplexity = Math.max(maxQueryComplexity, perPage);
-  }
-  return { requests, complexity, maxQueryComplexity };
+  return estimatePages(
+    (Object.entries(plan) as [EntityType, EntityPlan][]).map(([type, p]) => [p, counts[type]]),
+  );
+}
+
+/**
+ * Page sizes and selections of the reconcile pass's own queries (MIRROR-R13); its
+ * reference data is listed with bootstrapPlan. The query texts are reconcileQueries in
+ * ../mirror/listing.ts; the budget test checks they select exactly these shapes.
+ */
+export const reconcilePlan = {
+  changedProjects: bootstrapPlan.projects,
+  changedInitiatives: bootstrapPlan.initiatives,
+  // id trashed
+  projectIds: { pageSize: 250, node: { fields: 2 } },
+  initiativeIds: { pageSize: 250, node: { fields: 2 } },
+} satisfies Record<string, EntityPlan>;
+
+/** The reference data a reconcile pass lists in full: Linear sends no webhook for it. */
+export const referenceTypes = [
+  "teams",
+  "users",
+  "projectStatuses",
+  "projectLabels",
+  "initiativeLabels",
+] as const satisfies readonly EntityType[];
+
+/** Requests and points one reconcile pass costs, given entity counts and what changed. */
+export function estimateReconcile(
+  counts: Record<EntityType, number>,
+  changed: { projects: number; initiatives: number },
+): BootstrapEstimate {
+  return estimatePages([
+    ...referenceTypes.map((type) => [bootstrapPlan[type], counts[type]] as const),
+    [reconcilePlan.changedProjects, changed.projects],
+    [reconcilePlan.changedInitiatives, changed.initiatives],
+    [reconcilePlan.projectIds, counts.projects],
+    [reconcilePlan.initiativeIds, counts.initiatives],
+  ]);
 }

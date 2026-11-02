@@ -130,21 +130,43 @@ describe("environment per command", () => {
     });
   });
 
-  it("MIRROR-R7 scheduler requires the database and the OAuth client credentials", () => {
+  it("MIRROR-R7 scheduler requires the database, the OAuth client credentials and the token key", () => {
     expect(parseEnvFor("scheduler", {})).toEqual({
       ok: false,
       errors: [
         "DATABASE_URL: is required",
         "LINEAR_CLIENT_ID: is required",
         "LINEAR_CLIENT_SECRET: is required",
+        "TOKEN_ENCRYPTION_KEY: is required",
       ],
     });
     const source = {
       DATABASE_URL: complete.DATABASE_URL,
       LINEAR_CLIENT_ID: complete.LINEAR_CLIENT_ID,
       LINEAR_CLIENT_SECRET: complete.LINEAR_CLIENT_SECRET,
+      TOKEN_ENCRYPTION_KEY: complete.TOKEN_ENCRYPTION_KEY,
     };
     expect(parseEnvFor("scheduler", source)).toEqual({ ok: true, env: source });
+  });
+
+  it("MIRROR-R13 scheduler accepts LINEAR_API_URL as an origin, for tests and the smoke only", () => {
+    const source = {
+      DATABASE_URL: complete.DATABASE_URL,
+      LINEAR_CLIENT_ID: complete.LINEAR_CLIENT_ID,
+      LINEAR_CLIENT_SECRET: complete.LINEAR_CLIENT_SECRET,
+      TOKEN_ENCRYPTION_KEY: complete.TOKEN_ENCRYPTION_KEY,
+    };
+    expect(parseEnvFor("scheduler", { ...source, LINEAR_API_URL: "http://stub:8080" })).toEqual({
+      ok: true,
+      env: { ...source, LINEAR_API_URL: "http://stub:8080" },
+    });
+    expect(parseEnvFor("scheduler", { ...source, LINEAR_API_URL: "http://stub/graphql" })).toEqual({
+      ok: false,
+      errors: ["LINEAR_API_URL: must be an origin, without path, query or fragment"],
+    });
+    // serve never talks to anything but Linear itself.
+    const serve = parseEnvFor("serve", { ...complete, LINEAR_API_URL: "http://stub:8080" });
+    expect(serve.ok && "LINEAR_API_URL" in serve.env).toBe(false);
   });
 
   it("MIRROR-R7 a command ignores names it does not use, even when they are invalid", () => {

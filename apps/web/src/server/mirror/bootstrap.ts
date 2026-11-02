@@ -8,8 +8,8 @@
 // users, statuses, labels), then projects and initiatives, which the scope filter checks
 // against the public teams of the same pass (MIRROR-R12).
 //
-// Not wired to a command yet: the reconcile pass (T5) runs it when the mirror is empty
-// (read.ts mirrorIsEmpty), and it can be run on demand from there.
+// The sync pass (reconcile.ts, the image's `scheduler` command) runs it when the mirror is
+// empty (read.ts mirrorIsEmpty) or has no successful pass to start a window from.
 import type { Sql } from "../db/client.ts";
 import type { LinearClient } from "../linear/client.ts";
 import {

@@ -9,6 +9,7 @@ docs/**                   review-documentation
 **/*.test.tsx             review-test
 **/e2e/**                 review-test
 **/test/**                review-test
+tools/linear-stub.mjs     review-test
 pnpm-lock.yaml            linguist-generated=true
 mise.lock                 linguist-generated=true
 CHANGELOG.md              linguist-generated=true
