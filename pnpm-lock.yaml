@@ -178,9 +178,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@handsontable/react-wrapper':
-        specifier: 18.1.2
-        version: 18.1.2(handsontable@18.1.2)
       '@tanstack/react-router':
         specifier: 1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -193,9 +190,6 @@ importers:
       clsx:
         specifier: 2.1.1
         version: 2.1.1
-      handsontable:
-        specifier: 18.1.2
-        version: 18.1.2
       postgres:
         specifier: 3.4.9
         version: 3.4.9
@@ -212,6 +206,9 @@ importers:
         specifier: 3.7.0
         version: 3.7.0
     devDependencies:
+      '@handsontable/react-wrapper':
+        specifier: 18.1.2
+        version: 18.1.2(handsontable@18.1.2)
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -227,6 +224,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: 6.1.2
         version: 6.1.2(vite@8.3.5(@types/node@26.6.6)(jiti@2.7.0)(yaml@2.9.1))
+      handsontable:
+        specifier: 18.1.2
+        version: 18.1.2
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
