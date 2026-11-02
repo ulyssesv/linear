@@ -17,7 +17,7 @@ import {
 import { schedulerPass } from "../src/server/mirror/scheduler.ts";
 import { tables } from "../src/server/mirror/tables.ts";
 import { mirrorTypes } from "../src/server/mirror/types.ts";
-import { json, manualClock, type Recorded, tokenResponse } from "./linear-fakes.ts";
+import { json, manualClock, type Recorded, scopeGate, tokenResponse } from "./linear-fakes.ts";
 import { appEnv, fixtureWorkspace, project, type Workspace } from "./mirror-fixtures.ts";
 import type { ScratchDatabase } from "./scratch-db.ts";
 import { scratchDatabase } from "./test-db.ts";
@@ -55,6 +55,8 @@ type Query = { query: string; variables: Record<string, unknown> };
  * A fetch over `workspace` that honours what the reconcile queries ask Linear for: the
  * `updatedAt >= $since` filter and the page size, two nodes a page so small fixtures page.
  * `hold` blocks every GraphQL answer until it resolves; `fail(type)` replaces one answer.
+ * Like Linear, it refuses initiatives and initiative labels to a token without
+ * `initiative:read`.
  */
 function fakeLinear(
   workspace: Workspace,
@@ -63,6 +65,7 @@ function fakeLinear(
   const calls: Recorded[] = [];
   const queries: Query[] = [];
   let tokens = 0;
+  const scopes = scopeGate();
   let reached: () => void = () => {};
   const firstQuery = new Promise<void>((resolve) => {
     reached = resolve;
@@ -71,6 +74,7 @@ function fakeLinear(
     calls.push({ url: String(input), init });
     if (String(input).endsWith("/oauth/token")) {
       tokens++;
+      scopes.grant(`app-token-${tokens}`, init);
       return tokenResponse(`app-token-${tokens}`);
     }
     const body = JSON.parse(String(init.body)) as Query;
@@ -78,7 +82,7 @@ function fakeLinear(
     reached();
     await options.hold;
     const type = /\{\s*(\w+)\(/.exec(body.query)?.[1] as ListedType;
-    const failure = options.fail?.(type);
+    const failure = options.fail?.(type) ?? scopes.refuse(init, type);
     if (failure) return failure;
     const since = body.variables.since;
     const all = (workspace[type] ?? []).filter(

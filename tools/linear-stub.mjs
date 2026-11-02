@@ -6,13 +6,18 @@
 // It issues one app token on POST /oauth/token and answers every GraphQL listing from a
 // tiny public workspace: one team, one project status, one project. Every request leaves
 // one line on stdout ("linear-stub: token" or "linear-stub: graphql <root field>"), which
-// the smoke counts. Plain Node, no dependencies.
+// the smoke counts. Like Linear, it refuses initiatives and initiative labels with HTTP 400
+// when the token was requested without `initiative:read` or `initiative:write`. Plain Node,
+// no dependencies.
 import { createServer } from "node:http";
 
 // Not PORT: the image sets PORT=3000 for serve.
 const port = Number(process.env.LINEAR_STUB_PORT ?? 8080);
 const token = "smoke-app-token";
 const at = "2026-11-01T00:00:00.000Z";
+const initiativeTypes = new Set(["initiatives", "initiativeLabels"]);
+/** The scopes the issued token was requested with. */
+let granted = [];
 
 const workspace = {
   teams: [
@@ -80,6 +85,7 @@ const server = createServer(async (req, res) => {
   for await (const chunk of req) raw += chunk;
   if (req.method === "POST" && req.url === "/oauth/token") {
     console.log("linear-stub: token");
+    granted = (new URLSearchParams(raw).get("scope") ?? "").split(",");
     return send(res, 200, { access_token: token, token_type: "Bearer", expires_in: 2_591_999 });
   }
   if (req.method === "POST" && req.url === "/graphql") {
@@ -91,6 +97,15 @@ const server = createServer(async (req, res) => {
     const root = /\{\s*(\w+)\(/.exec(String(query))?.[1] ?? "";
     console.log(`linear-stub: graphql ${root}`);
     if (!(root in workspace)) return send(res, 400, { errors: [{ message: `no ${root}` }] });
+    if (
+      initiativeTypes.has(root) &&
+      !granted.includes("initiative:read") &&
+      !granted.includes("initiative:write")
+    ) {
+      const message =
+        "Invalid scope: `initiative:read` or `initiative:write` required for app user to read initiative data";
+      return send(res, 400, { errors: [{ message }] });
+    }
     return send(res, 200, {
       data: {
         [root]: { nodes: workspace[root], pageInfo: { hasNextPage: false, endCursor: null } },

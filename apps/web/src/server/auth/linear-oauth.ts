@@ -8,15 +8,17 @@
 //
 // No error message carries the client secret, a code, a verifier or a token.
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { linearAppScopes, linearTokenUrl } from "../linear/token.ts";
+import { linearTokenUrl } from "../linear/token.ts";
 import { linearOAuthCallbackUrl } from "../linear/urls.ts";
 import { isSecureOrigin, serializeCookie } from "./cookies.ts";
 
 export const linearAuthorizeUrl = "https://linear.app/oauth/authorize";
 export const linearRevokeUrl = "https://api.linear.app/oauth/revoke";
 
-/** Same scopes as the app token; `write` is unused until P2 and avoids re-consent then. */
-export const linearUserScopes = linearAppScopes;
+/** `write` is unused until P2 and avoids re-consent then. Not the app token's scopes:
+ * Linear asks `initiative:read` of an app actor only, and a user who already consented is
+ * not sent through consent again for it. */
+export const linearUserScopes = ["read", "write"] as const;
 
 export type OAuthClient = {
   LINEAR_CLIENT_ID: string;

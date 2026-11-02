@@ -62,6 +62,10 @@ reach workspace data.
 - Rotating the app's client secret or requesting different scopes revokes every
   client-credentials token; the server must renew on authentication failure, not only
   on expiry.
+- The app token asks for `initiative:read` as well as `read` and `write`: Linear serves
+  initiatives and initiative labels to an app actor only with that scope, though its OAuth
+  documentation lists no such scope. Sign-in asks users for `read` and `write` only. A
+  token saved under an older scope set is not reused; the server requests a new one.
 - The seed spec's open question about the CI key can be closed by pointing
   `linear:sync` at the same app's client credentials.
 - A user from another workspace who signs in is refused; the workspace is learned from
