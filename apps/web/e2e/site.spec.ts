@@ -36,10 +36,7 @@ test.describe("landing page", () => {
     await expect(thisSite.locator("[data-summary]")).not.toBeEmpty();
     const about = page.locator('[data-section="about"]');
     await expect(about.getByRole("heading", { level: 2 })).toHaveText("About me");
-    const photo = about.locator("img[data-photo]");
-    await photo.scrollIntoViewIfNeeded();
-    await expect(photo).toHaveJSProperty("complete", true);
-    expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    await expect(page.locator("img[data-photo]")).toHaveCount(0);
     await expect(about.getByRole("link", { name: "More about me" })).toHaveAttribute(
       "href",
       "/about",

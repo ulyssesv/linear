@@ -1,5 +1,6 @@
 import { signInHref, signOutPath } from "@/auth";
 import { MenuIcon } from "@/components/icons";
+import { LinearMark } from "@/components/linear-mark";
 import { SiteLink } from "@/components/site-link";
 import { ThemeControl } from "@/components/theme-control";
 import type { SessionUser } from "@/server/auth/sessions";
@@ -27,7 +28,7 @@ export function SiteHeader({
   const links = <NavLinks pathname={pathname} />;
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-2 text-[13px]">
+      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-2 sm:gap-x-6 text-[13px]">
         <SiteLink
           href="/"
           className="font-semibold text-foreground text-sm tracking-[-0.01em] hover:text-foreground/80"
@@ -39,7 +40,7 @@ export function SiteHeader({
           <ul className="flex flex-wrap items-center gap-x-5 gap-y-1">{links}</ul>
         </nav>
 
-        <div className="ml-auto flex items-center gap-3 lg:ml-0">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3 lg:ml-0">
           <div data-slot="theme">
             <ThemeControl theme={theme} href={href} />
           </div>
@@ -81,34 +82,36 @@ function NavLinks({ pathname }: Readonly<{ pathname: string }>) {
   });
 }
 
-// The account control (CONTENT-R4, MIRROR-R15): a sign-in link that returns to this page,
-// or the user's name and a sign-out button that returns here when this page is public.
+// The account control (CONTENT-R4, MIRROR-R15): a sign-in link with Linear's mark that
+// returns to this page (CONTENT-R16), or one bordered group, like the theme control, with
+// the user's name and a sign-out button that returns here when this page is public.
 function AccountControl({ user, href }: Readonly<{ user: SessionUser | null; href: string }>) {
   return (
-    <nav aria-label="Account" className="flex items-center gap-3">
+    <nav aria-label="Account" className="flex items-center">
       {user ? (
-        <>
+        <div data-account className="flex h-7 items-stretch rounded-md border">
           <span
             data-testid="signed-in-user"
-            className="max-w-28 truncate text-muted-foreground sm:max-w-44"
+            className="max-w-28 self-center truncate px-2.5 text-muted-foreground sm:max-w-44"
           >
             {user.name}
           </span>
-          <form method="post" action={signOutPath}>
+          <form method="post" action={signOutPath} className="flex border-l">
             <input type="hidden" name="next" value={href} />
             <button
               type="submit"
-              className="rounded-md border px-2.5 py-1 text-foreground transition-colors hover:bg-accent"
+              className="rounded-r-[5px] px-2.5 text-foreground transition-colors hover:bg-accent"
             >
               Sign out
             </button>
           </form>
-        </>
+        </div>
       ) : (
         <SiteLink
           href={signInHref(href)}
-          className="rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
+          <LinearMark className="size-3.5" />
           Sign in
         </SiteLink>
       )}

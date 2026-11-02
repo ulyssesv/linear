@@ -103,8 +103,8 @@ Non-goals:
 - **CONTENT-R11** (e2e) The landing page shows: a hero with the page's title and a short
   purpose (the site name stays in the header); one card per initiative with its title, a
   one-line summary, a status label and a link to its page; a section about this site with
-  the summary `/this-site` exports, linking to it; the author's photo and a short excerpt
-  about the author, linking to `/about`; and the footer.
+  the summary `/this-site` exports, linking to it; a short excerpt about the author,
+  linking to `/about`; and the footer.
 - **CONTENT-R12** (e2e) Each initiative page shows its title, status, the problem and the
   proposal, a demo section, and links to its Linear initiative and to its specs and
   records in the repository. The demo section either links to the demo, saying that it
@@ -116,8 +116,8 @@ Non-goals:
   `#delivery` (how it is released and deployed), `#process` (specs, records and the
   Linear loop) and `#ai` (how AI is used in the work). It links to the
   repository, `docs/specs`, `docs/records` and `AGENTS.md`.
-- **CONTENT-R14** (e2e) `/about` shows the author's name, a photo beside the text, a short
-  biography and contact links, with any email address shown as text. The landing excerpt and the about page
+- **CONTENT-R14** (e2e) `/about` shows the author's name, a captioned photo beside the
+  text, a short biography and contact links, with any email address shown as text. The landing excerpt and the about page
   read the excerpt from the same source, so they cannot drift.
 
 ### Look
@@ -132,7 +132,10 @@ Non-goals:
   accepted decision record chooses (REC-004 for the planning-sheet grid). Each one is
   listed with its licence in `apps/web/THIRD_PARTY.md`, and an exception names its
   record. No Linear logo, logomark, wordmark or icon file is in the repository, and no
-  Linear asset is loaded at runtime.
+  Linear asset is loaded at runtime, with one exception: Linear's logomark, copied
+  unaltered from Linear's brand kit into one component, marks the sign-in controls (the
+  header's sign-in link and the sign-in page's button) as signing in with Linear, and
+  appears nowhere else.
 - **CONTENT-R17** (e2e) The footer on every page states that the site is an independent
   project not affiliated with or endorsed by Linear, next to the version, commit and
   repository link of SEED-R17.
@@ -156,12 +159,12 @@ Non-goals:
 
 | Path | Page | Required parts | Draft source |
 |---|---|---|---|
-| `/` | Landing | Hero (title, purpose), initiative cards under "Ideas & Experiments", this-site section, author photo and excerpt | The author, initiative summaries |
+| `/` | Landing | Hero (title, purpose), initiative cards under "Ideas & Experiments", this-site section, author excerpt | The author, initiative summaries |
 | `/planning-sheet` | Planning sheet | Problem, proposal, status, demo (`/sheets`), links | SPEC-002, REC-004, REC-005 |
 | `/metrics-rollup` | Metrics rollup | Problem, proposal, status, demo (none yet), links | Initiative description |
 | `/ai-sdlc` | AI SDLC | Problem, proposal, status, demo (none yet), links | Initiative description, REC-001 |
 | `/this-site` | About this site | `#stack`, `#hosting`, `#delivery`, `#process`, `#ai`, repository links | AGENTS.md, SPEC-001, REC-002, REC-003, `docs/deploy.md`, the author |
-| `/about` | About me | Name, photo, biography, contact links | The author |
+| `/about` | About me | Name, captioned photo, biography, contact links | The author |
 
 The initiative's status label is one of Planned, In progress or Live, kept in the page's
 `meta` and changed by hand. The planning sheet starts as In progress, the other two as
@@ -282,8 +285,8 @@ styling so content is written against the real look, then the pages.
 1. Resolved at approval: the page about the site lives at `/this-site`.
 2. Resolved at approval: the about page has no photo. T6 ships placeholder text for the
    biography, marked as such; the author writes it later through ordinary copy changes.
-   Contact links are chosen in T6. Revised in T8: the author supplied a photo, shown on
-   `/about` and next to the landing excerpt.
+   Contact links are chosen in T6. Revised in T8: the author supplied a photo, shown with
+   a caption beside the text on `/about`.
 3. Resolved at approval: the monospace face, JetBrains Mono or Geist Mono, is picked in
    T2 on visual grounds.
 4. Resolved at approval: listing the specs and records with their statuses on
@@ -299,10 +302,18 @@ styling so content is written against the real look, then the pages.
 - Theme follows the system with a cookie-backed override applied on the server.
 - Demo access stays as REC-005 decides.
 - T8, 2026-11-02: the landing title is "Cover Letter to Linear", with "Linear" set in the
-  site's own type. An inline Linear logo was considered and rejected: CONTENT-R16 keeps
-  Linear's marks out of the repository, and Linear's brand page forbids combining them
-  with other graphics. The cards sit under "Ideas & Experiments" rather than
+  site's own type. An inline Linear logo in the title was considered and rejected: as the
+  page's headline it would read as Linear's branding of the site, the affiliation Linear's
+  brand page forbids implying. The cards sit under "Ideas & Experiments" rather than
   "Proposals"; the navigation reads "About this site" and "About me".
+- CONTENT-R16 amended on 2026-11-02, during T8: the sign-in controls carry Linear's
+  logomark, because signing in here is signing in with a Linear account. The brand page
+  accepts the logomark for referring to Linear as a company where a compact, chip-like
+  design is needed, and asks that it not be altered, combined with other graphics or used
+  to imply an affiliation. So the mark is the single-colour one from the brand kit,
+  unaltered (white, on the accent colour), next to the words "Sign in", only on the two
+  sign-in controls; the footer disclaimer stays. A test pins the path to one component
+  and its use to those controls.
 - CONTENT-R16 amended on 2026-11-02, during T2: as approved it required everything the
   site ships to be open source, but MIRROR T7 had already shipped Handsontable under the
   non-commercial licence that REC-004 accepted. The requirement now allows a demo library

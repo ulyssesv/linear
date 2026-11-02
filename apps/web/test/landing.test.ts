@@ -70,14 +70,17 @@ describe("landing route", () => {
     );
   });
 
-  it("CONTENT-R14 shows the author's photo and the excerpt from about.mdx", () => {
+  it("CONTENT-R14 shows the author excerpt from about.mdx, without a photo", () => {
     expect(excerpt.trim()).not.toBe("");
-    const about = withoutScripts().slice(withoutScripts().indexOf('data-section="about"'));
-    expect(about).toContain(
-      `<p data-excerpt="true" class="text-muted-foreground leading-7">${escapeHtml(excerpt)}</p>`,
+    const page = withoutScripts();
+    const about = page.slice(
+      page.indexOf('data-section="about"'),
+      page.indexOf("</section>", page.indexOf('data-section="about"')),
     );
-    expect(about).toMatch(/<img data-photo="true" src="\/assets\/me-160-[^"]+\.webp"/);
-    expect(about).toContain('loading="lazy"');
+    expect(about).toContain(
+      `<p data-excerpt="true" class="mt-3 text-muted-foreground leading-7">${escapeHtml(excerpt)}</p>`,
+    );
+    expect(page).not.toContain("data-photo");
   });
 
   it("CONTENT-R17 SEED-R21 shows the built version and short commit in the footer", () => {

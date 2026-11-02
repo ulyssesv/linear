@@ -68,12 +68,25 @@ export function Callout({ title, children }: Readonly<{ title?: string; children
   );
 }
 
-/** A photo in the copy, by its name in src/images.ts, with an optional caption
- * (CONTENT-R22). It spans the prose column. */
-export function Figure({ image, caption }: Readonly<{ image: ImageName; caption?: ReactNode }>) {
+/** A photo by its name in src/images.ts, with an optional caption (CONTENT-R22). In copy it
+ * spans the prose column; a page placing it elsewhere passes its own `sizes`, and `eager`
+ * when it is on the first screen. */
+export function Figure({
+  image,
+  caption,
+  sizes = "(min-width: 48rem) 42rem, calc(100vw - 3rem)",
+  eager,
+  className = "not-prose my-8",
+}: Readonly<{
+  image: ImageName;
+  caption?: ReactNode;
+  sizes?: string;
+  eager?: boolean;
+  className?: string;
+}>) {
   return (
-    <figure data-figure className="not-prose my-8">
-      <Photo image={images[image]} sizes="(min-width: 48rem) 42rem, calc(100vw - 3rem)" />
+    <figure data-figure className={className}>
+      <Photo image={images[image]} sizes={sizes} eager={eager} />
       {caption ? (
         <figcaption className="mt-2 text-muted-foreground text-sm">{caption}</figcaption>
       ) : null}

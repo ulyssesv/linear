@@ -9,6 +9,8 @@ declare module "*/about.mdx" {
   export const meta: ContentMeta;
   /** One or two sentences about the author, shown on /about and on the landing page. */
   export const excerpt: string;
+  /** The caption of the author's photo on /about. */
+  export const photoCaption: string;
   const Content: MDXContent;
   export default Content;
 }

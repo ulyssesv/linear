@@ -2,10 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { contentHead, mdxComponents } from "@/components/content";
 import { ArrowRightIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
-import { Photo } from "@/components/photo";
 import { SiteLink } from "@/components/site-link";
 import { Badge } from "@/components/ui/badge";
-import { images } from "@/images";
 import { type ContentMeta, isInitiativeMeta } from "@/lib/content";
 import { type InitiativeKey, initiativePages } from "@/site";
 import { excerpt } from "../../content/about.mdx";
@@ -17,8 +15,7 @@ import { summary } from "../../content/this-site.mdx";
 
 // The landing page (CONTENT-R11): a hero with the title and the purpose, one card per
 // initiative read from that initiative's own page, a section about this site with the
-// summary from /this-site, and the author's photo and the excerpt shared with /about
-// (CONTENT-R14). Copy lives in content/landing.mdx and the files it names.
+// summary from /this-site, and the author excerpt shared with /about (CONTENT-R14). Copy lives in content/landing.mdx and the files it names.
 const initiativeMeta: Record<InitiativeKey, ContentMeta> = {
   "planning-sheet": planningSheet,
   "metrics-rollup": metricsRollup,
@@ -107,15 +104,10 @@ function LandingPage() {
           <h2 id="about" className="font-semibold text-lg tracking-[-0.01em]">
             About me
           </h2>
-          <div className="mt-3 grid grid-cols-[5.5rem_minmax(0,1fr)] items-start gap-5">
-            <Photo image={images.me} sizes="5.5rem" />
-            <div>
-              <p data-excerpt className="text-muted-foreground leading-7">
-                {excerpt}
-              </p>
-              <MoreLink href="/about">More about me</MoreLink>
-            </div>
-          </div>
+          <p data-excerpt className="mt-3 text-muted-foreground leading-7">
+            {excerpt}
+          </p>
+          <MoreLink href="/about">More about me</MoreLink>
         </section>
       </div>
     </PageContainer>
