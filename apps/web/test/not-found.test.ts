@@ -36,3 +36,9 @@ describe("not-found page", () => {
     expect(page).toContain(`data-testid="commit">${inject("builtCommit").slice(0, 7)}<`);
   });
 });
+
+describe("not-found title", () => {
+  it("CONTENT-R7 an unknown path has a title of its own", () => {
+    expect(html).toContain(`<title>Page not found · ${site.name}</title>`);
+  });
+});

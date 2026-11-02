@@ -1,58 +1,63 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+/* Fonts are served by the site itself (CONTENT-R16, CONTENT-R19); licences in THIRD_PARTY.md. */
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/geist-mono/wght.css";
 
-/* shadcn/ui baseline, neutral palette. Dark follows the system preference
-   (SEED-R19), so the page needs no script to pick a theme. */
-@custom-variant dark (@media (prefers-color-scheme: dark));
-
-:root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    color-scheme: dark;
+/* Theme (CONTENT-R18). The root route sets data-theme="light" or "dark" from the theme
+   cookie during server rendering; without it, "system", the colour scheme follows the
+   preference. Tokens use light-dark(), so each colour is declared once for both themes. */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
   }
 }
 
+/* The look follows Linear's public site with its own parts (CONTENT-R15): near-black
+   neutrals, one desaturated indigo accent, thin borders. Contrast pairs meet WCAG 2.2 AA
+   in both themes (CONTENT-R20): foreground 19:1, muted text >= 5.2:1 on every surface,
+   white on the accent 4.7:1, accent text >= 6.1:1. */
+:root {
+  color-scheme: light dark;
+  --radius: 0.5rem;
+  --background: light-dark(#ffffff, #08090a);
+  --foreground: light-dark(#0f1011, #f7f8f8);
+  --card: light-dark(#ffffff, #0f1011);
+  --card-foreground: light-dark(#0f1011, #f7f8f8);
+  --popover: light-dark(#ffffff, #0f1011);
+  --popover-foreground: light-dark(#0f1011, #f7f8f8);
+  --primary: #5e6ad2;
+  --primary-foreground: #ffffff;
+  --secondary: light-dark(#f4f5f6, #18191b);
+  --secondary-foreground: light-dark(#0f1011, #f7f8f8);
+  --muted: light-dark(#f4f5f6, #141516);
+  --muted-foreground: light-dark(#62666d, #8a8f98);
+  --accent: light-dark(#f0f1f3, #1c1d20);
+  --accent-foreground: light-dark(#0f1011, #f7f8f8);
+  /* Accent-coloured text, links and markers. */
+  --brand: light-dark(#4c56c0, #8d95f2);
+  --destructive: light-dark(#c4314b, #f2687c);
+  --border: light-dark(#e6e7ea, rgb(255 255 255 / 0.08));
+  --input: light-dark(#dcdde1, rgb(255 255 255 / 0.12));
+  --ring: light-dark(#5e6ad2, #7c85e0);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
 @theme inline {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -71,6 +76,7 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-brand: var(--brand);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -79,9 +85,88 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  html {
+    font-feature-settings: "cv01", "ss03";
+    -webkit-text-size-adjust: 100%;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background font-sans text-[15px] text-foreground leading-normal antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply text-balance;
+  }
+  /* A visible focus state on every interactive element (CONTENT-R20). */
+  :focus-visible {
+    @apply rounded-sm outline-2 outline-ring outline-offset-2;
+  }
+  ::selection {
+    @apply bg-primary/30;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+}
+
+/* The one prose style of content pages (CONTENT-R9). */
+@layer components {
+  .prose {
+    @apply max-w-[42rem] text-[15px] text-foreground/90 leading-7;
+
+    & > * + * {
+      @apply mt-4;
+    }
+    & h1 {
+      @apply font-semibold text-3xl text-foreground tracking-[-0.022em] sm:text-4xl;
+    }
+    & h2 {
+      @apply mt-12 scroll-mt-20 font-semibold text-foreground text-xl tracking-[-0.012em];
+    }
+    & h3 {
+      @apply mt-8 scroll-mt-20 font-semibold text-base text-foreground;
+    }
+    & h2 + *,
+    & h3 + * {
+      @apply mt-3;
+    }
+    & strong {
+      @apply font-semibold text-foreground;
+    }
+    & a {
+      @apply text-brand underline decoration-brand/40 underline-offset-4 transition-colors hover:decoration-brand;
+    }
+    & ul {
+      @apply list-disc space-y-1.5 pl-5 marker:text-muted-foreground;
+    }
+    & ol {
+      @apply list-decimal space-y-1.5 pl-5 marker:text-muted-foreground;
+    }
+    & code {
+      @apply rounded border bg-muted px-1 py-px font-mono text-[0.85em];
+    }
+    & pre {
+      @apply overflow-x-auto rounded-lg border bg-muted p-4 text-[13px] leading-6;
+    }
+    & pre code {
+      @apply border-0 bg-transparent p-0;
+    }
+    & blockquote {
+      @apply border-l-2 pl-4 text-muted-foreground;
+    }
+    & hr {
+      @apply my-10;
+    }
+    & table {
+      @apply block overflow-x-auto text-sm;
+    }
+    & th,
+    & td {
+      @apply border-b px-3 py-2 text-left;
+    }
   }
 }

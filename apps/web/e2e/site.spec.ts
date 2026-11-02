@@ -1,32 +1,65 @@
 // Site checks shared by the `local` and `smoke` projects (SEED-R27 runs them against BASE_URL).
 import { expect, test } from "@playwright/test";
-import { proofsOfConcept, site } from "../src/site.ts";
+import { initiativePages, site } from "../src/site.ts";
 
 test.describe("landing page", () => {
-  test("SEED-R17 shows the site name, purpose, proof-of-concept cards and repository link", async ({
+  test("CONTENT-R11 shows the purpose, one card per initiative, this site and the author", async ({
     page,
   }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(site.name);
-    await expect(page.getByText(site.purpose)).toBeVisible();
+    await expect(page.locator("[data-purpose]")).not.toBeEmpty();
 
-    const cards = page.locator("[data-poc]");
-    await expect(cards).toHaveCount(proofsOfConcept.length);
-    for (const poc of proofsOfConcept) {
-      const card = page.locator(`[data-poc="${poc.key}"]`);
-      await expect(card.getByRole("heading", { level: 3 })).toHaveText(poc.title);
-      await expect(card.getByText(poc.status, { exact: true })).toBeVisible();
-      await expect(card.getByRole("link", { name: poc.link.label })).toHaveAttribute(
-        "href",
-        poc.link.href,
-      );
+    const cards = page.locator("[data-initiative]");
+    await expect(cards).toHaveCount(initiativePages.length);
+    for (const initiative of initiativePages) {
+      const card = page.locator(`[data-initiative="${initiative.key}"]`);
+      await expect(card.getByRole("heading", { level: 3 })).not.toBeEmpty();
+      await expect(card.locator("p")).not.toBeEmpty();
+      await expect(card.locator("[data-status]")).toHaveText(/Status: (Planned|In progress|Live)/);
+      await expect(card.getByRole("link")).toHaveAttribute("href", initiative.href);
     }
 
+    const thisSite = page.locator('[data-section="this-site"]');
+    await expect(thisSite.getByRole("heading", { level: 2 })).toHaveText("This site");
+    await expect(thisSite.getByRole("link", { name: "How it is built" })).toHaveAttribute(
+      "href",
+      "/this-site",
+    );
+    const about = page.locator('[data-section="about"]');
+    await expect(about.getByRole("link", { name: "More about the author" })).toHaveAttribute(
+      "href",
+      "/about",
+    );
+    await expect(page.getByRole("contentinfo")).toBeVisible();
     await expect(page.locator(`a[href="${site.repository}"]`)).toBeVisible();
   });
 
-  test("SEED-R17 footer shows the deployed version and short commit from /healthz", async ({
+  test("CONTENT-R11 a card leads to its initiative page with the same title and status", async ({
+    page,
+  }) => {
+    for (const initiative of initiativePages) {
+      await page.goto("/");
+      const card = page.locator(`[data-initiative="${initiative.key}"]`);
+      const title = await card.getByRole("heading", { level: 3 }).textContent();
+      const status = await card.locator("[data-status]").textContent();
+      await card.getByRole("link").click();
+      await expect(page).toHaveURL(new RegExp(`${initiative.href}$`));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveText(title ?? "");
+      await expect(page.locator("[data-status]")).toHaveText(status ?? "");
+    }
+  });
+
+  test("CONTENT-R14 the landing excerpt is the one on the about page", async ({ page }) => {
+    await page.goto("/");
+    const onLanding = await page.locator('[data-section="about"] [data-excerpt]').textContent();
+    expect(onLanding?.trim()).not.toBe("");
+    await page.goto("/about");
+    await expect(page.locator("[data-excerpt]")).toHaveText(onLanding ?? "");
+  });
+
+  test("CONTENT-R17 footer shows the deployed version and short commit from /healthz", async ({
     page,
     request,
   }) => {

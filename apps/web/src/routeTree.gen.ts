@@ -10,10 +10,16 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as AiSdlcRouteImport } from './routes/ai-sdlc'
 import { Route as HealthzRouteImport } from './routes/healthz'
+import { Route as MetricsRollupRouteImport } from './routes/metrics-rollup'
+import { Route as PlanningSheetRouteImport } from './routes/planning-sheet'
 import { Route as ReadyzRouteImport } from './routes/readyz'
 import { Route as SheetsRouteImport } from './routes/sheets'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as ThemeRouteImport } from './routes/theme'
+import { Route as ThisSiteRouteImport } from './routes/this-site'
 import { Route as AuthSignOutRouteImport } from './routes/auth/sign-out'
 import { Route as SheetsIndexRouteImport } from './routes/sheets/index'
 import { Route as SheetsInitiativesRouteImport } from './routes/sheets/initiatives'
@@ -27,9 +33,29 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiSdlcRoute = AiSdlcRouteImport.update({
+  id: '/ai-sdlc',
+  path: '/ai-sdlc',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HealthzRoute = HealthzRouteImport.update({
   id: '/healthz',
   path: '/healthz',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetricsRollupRoute = MetricsRollupRouteImport.update({
+  id: '/metrics-rollup',
+  path: '/metrics-rollup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanningSheetRoute = PlanningSheetRouteImport.update({
+  id: '/planning-sheet',
+  path: '/planning-sheet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReadyzRoute = ReadyzRouteImport.update({
@@ -45,6 +71,16 @@ const SheetsRoute = SheetsRouteImport.update({
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ThemeRoute = ThemeRouteImport.update({
+  id: '/theme',
+  path: '/theme',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ThisSiteRoute = ThisSiteRouteImport.update({
+  id: '/this-site',
+  path: '/this-site',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignOutRoute = AuthSignOutRouteImport.update({
@@ -85,10 +121,16 @@ const AuthLinearSignInRoute = AuthLinearSignInRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/ai-sdlc': typeof AiSdlcRoute
   '/healthz': typeof HealthzRoute
+  '/metrics-rollup': typeof MetricsRollupRoute
+  '/planning-sheet': typeof PlanningSheetRoute
   '/readyz': typeof ReadyzRoute
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/theme': typeof ThemeRoute
+  '/this-site': typeof ThisSiteRoute
   '/auth/sign-out': typeof AuthSignOutRoute
   '/sheets/initiatives': typeof SheetsInitiativesRoute
   '/sheets/projects': typeof SheetsProjectsRoute
@@ -99,9 +141,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/ai-sdlc': typeof AiSdlcRoute
   '/healthz': typeof HealthzRoute
+  '/metrics-rollup': typeof MetricsRollupRoute
+  '/planning-sheet': typeof PlanningSheetRoute
   '/readyz': typeof ReadyzRoute
   '/sign-in': typeof SignInRoute
+  '/theme': typeof ThemeRoute
+  '/this-site': typeof ThisSiteRoute
   '/auth/sign-out': typeof AuthSignOutRoute
   '/sheets/initiatives': typeof SheetsInitiativesRoute
   '/sheets/projects': typeof SheetsProjectsRoute
@@ -113,10 +161,16 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/ai-sdlc': typeof AiSdlcRoute
   '/healthz': typeof HealthzRoute
+  '/metrics-rollup': typeof MetricsRollupRoute
+  '/planning-sheet': typeof PlanningSheetRoute
   '/readyz': typeof ReadyzRoute
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/theme': typeof ThemeRoute
+  '/this-site': typeof ThisSiteRoute
   '/auth/sign-out': typeof AuthSignOutRoute
   '/sheets/initiatives': typeof SheetsInitiativesRoute
   '/sheets/projects': typeof SheetsProjectsRoute
@@ -129,10 +183,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
+    | '/ai-sdlc'
     | '/healthz'
+    | '/metrics-rollup'
+    | '/planning-sheet'
     | '/readyz'
     | '/sheets'
     | '/sign-in'
+    | '/theme'
+    | '/this-site'
     | '/auth/sign-out'
     | '/sheets/initiatives'
     | '/sheets/projects'
@@ -143,9 +203,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/ai-sdlc'
     | '/healthz'
+    | '/metrics-rollup'
+    | '/planning-sheet'
     | '/readyz'
     | '/sign-in'
+    | '/theme'
+    | '/this-site'
     | '/auth/sign-out'
     | '/sheets/initiatives'
     | '/sheets/projects'
@@ -156,10 +222,16 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/about'
+    | '/ai-sdlc'
     | '/healthz'
+    | '/metrics-rollup'
+    | '/planning-sheet'
     | '/readyz'
     | '/sheets'
     | '/sign-in'
+    | '/theme'
+    | '/this-site'
     | '/auth/sign-out'
     | '/sheets/initiatives'
     | '/sheets/projects'
@@ -171,10 +243,16 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  AiSdlcRoute: typeof AiSdlcRoute
   HealthzRoute: typeof HealthzRoute
+  MetricsRollupRoute: typeof MetricsRollupRoute
+  PlanningSheetRoute: typeof PlanningSheetRoute
   ReadyzRoute: typeof ReadyzRoute
   SheetsRoute: typeof SheetsRouteWithChildren
   SignInRoute: typeof SignInRoute
+  ThemeRoute: typeof ThemeRoute
+  ThisSiteRoute: typeof ThisSiteRoute
   AuthSignOutRoute: typeof AuthSignOutRoute
   WebhooksLinearRoute: typeof WebhooksLinearRoute
   AuthLinearCallbackRoute: typeof AuthLinearCallbackRoute
@@ -190,11 +268,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-sdlc': {
+      id: '/ai-sdlc'
+      path: '/ai-sdlc'
+      fullPath: '/ai-sdlc'
+      preLoaderRoute: typeof AiSdlcRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/healthz': {
       id: '/healthz'
       path: '/healthz'
       fullPath: '/healthz'
       preLoaderRoute: typeof HealthzRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/metrics-rollup': {
+      id: '/metrics-rollup'
+      path: '/metrics-rollup'
+      fullPath: '/metrics-rollup'
+      preLoaderRoute: typeof MetricsRollupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planning-sheet': {
+      id: '/planning-sheet'
+      path: '/planning-sheet'
+      fullPath: '/planning-sheet'
+      preLoaderRoute: typeof PlanningSheetRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/readyz': {
@@ -216,6 +322,20 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/theme': {
+      id: '/theme'
+      path: '/theme'
+      fullPath: '/theme'
+      preLoaderRoute: typeof ThemeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/this-site': {
+      id: '/this-site'
+      path: '/this-site'
+      fullPath: '/this-site'
+      preLoaderRoute: typeof ThisSiteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/sign-out': {
@@ -287,10 +407,16 @@ const SheetsRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  AiSdlcRoute: AiSdlcRoute,
   HealthzRoute: HealthzRoute,
+  MetricsRollupRoute: MetricsRollupRoute,
+  PlanningSheetRoute: PlanningSheetRoute,
   ReadyzRoute: ReadyzRoute,
   SheetsRoute: SheetsRouteWithChildren,
   SignInRoute: SignInRoute,
+  ThemeRoute: ThemeRoute,
+  ThisSiteRoute: ThisSiteRoute,
   AuthSignOutRoute: AuthSignOutRoute,
   WebhooksLinearRoute: WebhooksLinearRoute,
   AuthLinearCallbackRoute: AuthLinearCallbackRoute,

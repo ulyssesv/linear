@@ -100,9 +100,14 @@ match what the server sends:
 | Scopes | `read` and `write` (`write` is unused until planning sheet P2) |
 
 The paths are fixed in `apps/web/src/server/linear/urls.ts`. Both must reach the pod
-through the ingress, the webhook path from Linear's servers on the public internet. For
-local development add `http://localhost:3000/auth/linear/callback` as a second callback
-URL; a webhook needs a public tunnel, whose origin then becomes `PUBLIC_URL`.
+through the ingress, the webhook path from Linear's servers on the public internet.
+
+Local development uses a separate OAuth app, never this one: callback
+`http://localhost:3000/auth/linear/callback`, client credentials enabled, webhooks off,
+and its own secrets in a `.env` that never leaves the machine. README.md, "Local
+environment", has the steps and `.env.example` the names. A webhook would need a public
+tunnel, whose origin then becomes `PUBLIC_URL`; without one, `scheduler` runs keep the
+local mirror current.
 
 ### Webhook endpoint
 

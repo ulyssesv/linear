@@ -29,9 +29,22 @@ flows from Linear into files automatically.
 - `apps/web/src/server/db`: Postgres access (`database()`, `createSql()`) and the
   migration runner. Migrations are `migrations/NNNN_slug.sql`, applied in order by the
   image's `migrate` command; add the next number, never edit a released one.
+- `apps/web/content/*.mdx`: the copy of the site's pages, one MDX file per page with
+  `export const meta = { title, description }`. Routes render it with `ContentPage` from
+  `apps/web/src/components/content.tsx`, which also holds the components copy may use.
+  Every page sits in the shell of `routes/__root.tsx`: header, `<main>`, footer.
+- `apps/web/THIRD_PARTY.md`: every font, icon set and library the site ships, with its
+  licence. A test fails when a runtime dependency or a package imported by `styles.css`
+  is missing there. Fonts are self-hosted from `@fontsource-variable` packages; icons are
+  Lucide paths inlined in `components/icons.tsx`. No Linear logo or asset, ever.
 - `apps/web/src/server/auth`: sign in with Linear, sessions and encrypted per-user tokens.
   Routes under `/sheets` require a session; signed-in end-to-end tests use the `signIn`
   fixture of `apps/web/e2e/auth.ts`, which writes a session to the e2e database.
+- `.env` at the root of the main checkout: the local secrets for sign-in, `serve`,
+  `scheduler` and the Linear tools, loaded by `mise.toml` into every worktree's shell
+  through git's common directory. Gitignored; `.env.example` lists the names and README.md,
+  "Local environment", the setup with a development OAuth app. Never put a production value
+  in it. The e2e server ignores it except `DATABASE_URL`.
 - `compose.yaml`: the local Postgres, also started by CI. Tests and the dev server use it
   unless `DATABASE_URL` says otherwise.
 - `docs/deploy.md`: the hand-off to infra: image, port, probes, env contract, security context.

@@ -65,3 +65,7 @@ individual, to demonstrate a proposal. It earns nothing and sells nothing.
 - The adapter boundary is a hard rule enforced in CI, not a convention.
 - HyperFormula, the vendor's formula engine, is GPLv3 and is not used; the repository
   stays MIT (REC-003). P4 records the evaluator decision.
+- The grid is the one exception to CONTENT-R16's open-source rule for what the site
+  ships. `apps/web/THIRD_PARTY.md` lists `handsontable` and
+  `@handsontable/react-wrapper` with this record, and the licence test accepts them only
+  while this record is accepted.

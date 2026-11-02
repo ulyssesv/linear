@@ -1,0 +1,53 @@
+export const meta = {
+  title: "AI SDLC",
+  description:
+    "Linear alongside specs, decision records and glossaries whose source of truth is a repository.",
+  status: "Planned",
+};
+
+## Problem
+
+Working with coding agents moves more of a team's thinking into files next to the code:
+specs that say what to build, records of the decisions taken, glossaries of the terms in
+use. Agents read and write those files in the same change as the code, and they are
+versioned and reviewed with it.
+
+Linear is where the same work is planned, tracked and discussed. When a spec lives both
+as a file and as a Linear document, the two drift. An edit in a pull request does not
+reach the document, and a comment in Linear does not reach the file. Neither side can
+tell which tests cover which requirement.
+
+## Proposal
+
+Keep the repository as the source of truth for these documents, and use Linear for what
+it does well: tracking, discussion and review.
+
+- Specs and records are mirrored one way into Linear documents, on the project, issue or
+  initiative they belong to.
+- Each task of a spec becomes an issue, and each pull request attaches to its issue and
+  is reviewed in Linear Diffs.
+- Requirements carry ids and tests cite them. A check refuses to call a spec done while
+  one of its requirements has no test.
+- Feedback left in Linear is applied to the file in a later change, the file is mirrored
+  again, and the thread gets a reply saying what changed. Nothing flows from Linear into
+  the files automatically.
+
+This site is built that way (REC-001), with a sync script and a traceability check in the
+repository. The initiative will turn that working practice into a proposal for Linear.
+Glossaries are part of the proposal but are not in the repository yet.
+
+## Demo
+
+<DemoLink />
+
+## Links
+
+- [AI SDLC initiative in Linear](https://linear.app/sesv/initiative/ai-sdlc-4f642730a3cf)
+- [REC-001 Code is the source of truth; Linear mirrors it](https://github.com/ulyssesv/linear/blob/main/docs/records/001-code-is-the-source-of-truth.md)
+- [AGENTS.md](https://github.com/ulyssesv/linear/blob/main/AGENTS.md), the process this
+  repository follows
+- [How specs are written](https://github.com/ulyssesv/linear/blob/main/docs/specs/README.md)
+  and [how records are written](https://github.com/ulyssesv/linear/blob/main/docs/records/README.md)
+- There are no specs for this initiative yet. They will appear in
+  [docs/specs](https://github.com/ulyssesv/linear/tree/main/docs/specs) with the area
+  `ai-sdlc`.

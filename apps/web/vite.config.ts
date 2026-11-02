@@ -1,3 +1,4 @@
+import mdx from "@mdx-js/rollup";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
@@ -12,6 +13,12 @@ export default defineConfig(({ command }) => {
     server: { port: 3000 },
     resolve: { tsconfigPaths: true },
     define: buildInfoDefine(),
-    plugins: [tailwindcss(), tanstackStart(), viteReact()],
+    // MDX first, so the copy under content/ compiles to JSX before React sees it (CONTENT-R8).
+    plugins: [
+      { enforce: "pre", ...mdx() },
+      tailwindcss(),
+      tanstackStart(),
+      viteReact({ include: /\.(?:mdx|[jt]sx?)$/ }),
+    ],
   };
 });

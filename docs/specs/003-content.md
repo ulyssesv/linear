@@ -1,7 +1,7 @@
 ---
 id: CONTENT
 title: Site content, information architecture and look
-status: approved
+status: implementing
 area: site-platform
 linear:
   initiative: https://linear.app/sesv/initiative/site-platform-6ac5ff8c3199
@@ -40,8 +40,9 @@ Goals:
 - An about page.
 - Pages that anyone can read without signing in. Sign-in is needed only to enter a demo,
   and is available from every page.
-- A look styled after Linear's public site, built only from open-source parts and
-  without Linear's marks.
+- A look styled after Linear's public site, built from open-source parts and without
+  Linear's marks. The one exception is a demo library whose licence a decision record
+  chooses (section 5, Licences).
 - Copy kept in MDX files so that editing it is editing prose.
 
 Non-goals:
@@ -121,9 +122,11 @@ Non-goals:
   shadcn/ui tokens and components already in the repository. The sign-in page, the
   not-found page and the demo shells use the same layout and styles as content pages.
 - **CONTENT-R16** (check) Every font, icon set and component library the site ships is
-  under an open-source licence, and its licence is listed in `apps/web/THIRD_PARTY.md`.
-  No Linear logo, logomark, wordmark or icon file is in the repository, and no Linear
-  asset is loaded at runtime.
+  under an open-source licence, except a library a demo uses under a licence that an
+  accepted decision record chooses (REC-004 for the planning-sheet grid). Each one is
+  listed with its licence in `apps/web/THIRD_PARTY.md`, and an exception names its
+  record. No Linear logo, logomark, wordmark or icon file is in the repository, and no
+  Linear asset is loaded at runtime.
 - **CONTENT-R17** (e2e) The footer on every page states that the site is an independent
   project not affiliated with or endorsed by Linear, next to the version, commit and
   repository link of SEED-R17.
@@ -173,6 +176,16 @@ commercial Berkeley Mono. Font files are committed or come from a `@fontsource` 
 and are served by the site (CONTENT-R19). Icons, if any, come from Lucide (ISC), the set
 shadcn/ui uses.
 
+**Licences.** The look itself (fonts, icons, components) is open source without
+exception. A demo may need a library that is not: the planning-sheet grid is Handsontable
+under its non-commercial licence, chosen in REC-004 for this non-commercial,
+demonstrative site. Such a library is allowed when an accepted record chooses its licence
+and names it; `THIRD_PARTY.md` lists it in its own table with the record id, and the
+licence test accepts a non-open-source row only when it cites an accepted record that
+names the package. If the record is retired or superseded, the test fails until the
+library is replaced or listed under its new licence. The site's own code stays MIT
+(REC-003).
+
 **Theme.** The `dark` variant moves from the media query to a `data-theme` attribute on
 `<html>`. The root route reads a `theme` cookie (`light`, `dark` or `system`) on the
 server and sets the attribute; `system`, or no cookie, leaves it unset and the media
@@ -210,8 +223,9 @@ below the small breakpoint, which keeps it usable without JavaScript (CONTENT-R6
   `/this-site` anchors and links, about page and landing excerpt, footer disclaimer,
   theme cookie applied at first render, no cross-origin requests.
 - Checks: `.gitattributes` category; a test or script that fails when
-  `apps/web/THIRD_PARTY.md` misses a shipped font or library, or when a file named or
-  shaped like a Linear mark appears under `apps/web`.
+  `apps/web/THIRD_PARTY.md` misses a shipped font or library, when a listed licence is
+  neither open source nor chosen by an accepted record that names the package, or when a
+  file named or shaped like a Linear mark appears under `apps/web`.
 - Manual: the look against linear.app in both themes, contrast and keyboard use, and
   reading every page on a phone.
 
@@ -252,6 +266,12 @@ styling so content is written against the real look, then the pages.
 - Demos keep their own paths; initiative pages link to them.
 - Theme follows the system with a cookie-backed override applied on the server.
 - Demo access stays as REC-005 decides.
+- CONTENT-R16 amended on 2026-11-02, during T2: as approved it required everything the
+  site ships to be open source, but MIRROR T7 had already shipped Handsontable under the
+  non-commercial licence that REC-004 accepted. The requirement now allows a demo library
+  whose licence an accepted record chooses and names, listed with that record in
+  `THIRD_PARTY.md`. Replacing the grid to keep the original wording was rejected: REC-004
+  weighed that cost already, and its exit through the grid adapter stays open.
 
 ## 10. References
 

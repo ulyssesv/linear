@@ -23,13 +23,8 @@ export default defineConfig({
   projects: [
     {
       name: "local",
-      testMatch: [
-        "site.spec.ts",
-        "database.spec.ts",
-        "auth.spec.ts",
-        "sheets.spec.ts",
-        "sheet-behaviours.spec.ts",
-      ],
+      // Every spec file but the deployed-only smoke checks.
+      testIgnore: ["smoke.spec.ts"],
       use: { baseURL: `http://localhost:${port}` },
     },
     {

@@ -33,7 +33,8 @@ function SheetNav({ kind }: { kind: SheetKind }) {
 
 export function SheetFrame({ kind, children }: { kind: SheetKind; children: ReactNode }) {
   return (
-    <div className="flex h-[calc(100dvh-2.5rem)] min-h-[24rem] flex-col gap-4 px-6 pt-4 pb-6">
+    // The viewport below the site header (3.5rem, CONTENT-R3); the footer follows below.
+    <div className="flex h-[calc(100dvh-3.5rem)] min-h-[24rem] flex-col gap-4 px-6 pt-4 pb-6">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="font-semibold text-2xl tracking-tight">{sheetTitles[kind]}</h1>
         <SheetNav kind={kind} />
