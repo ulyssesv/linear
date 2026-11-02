@@ -3,10 +3,113 @@ export const meta = {
   description: "How linear.sesv.co is built, delivered and developed, including how AI is used.",
 };
 
-<Callout title="Placeholder">
-  First-draft copy for the site shell. CONTENT T5 writes this page from AGENTS.md,
-  SPEC-001, REC-002, REC-003 and the deploy notes.
-</Callout>
+This site is one web application, built from specs and decision records kept in
+[the repository](https://github.com/ulyssesv/linear), with Linear tracking the work. The
+process that builds it is meant to show what the [AI SDLC](/ai-sdlc) proposal describes,
+applied to the site itself. This page explains the stack, how a change reaches production, how the
+work is planned and tracked, and where AI fits in.
 
-The site is one TanStack Start application, built from specs and decision records kept
-in [the repository](https://github.com/ulyssesv/linear), with Linear tracking the work.
+<h2 id="stack">How it is built</h2>
+
+The repository is a pnpm workspace. `apps/web` is the only deployable, `packages/` is
+reserved for code shared between applications, and `tools/` holds repository tooling
+such as the spec checker and the script that mirrors documents into Linear.
+
+The site is TypeScript on TanStack Start with React, rendered on the server and built as
+a plain Node server. Styling is Tailwind with shadcn/ui components. The copy of pages
+like this one lives in MDX files under `apps/web/content`, so editing it is editing
+prose.
+
+Data lives in Postgres. It holds sign-in sessions, the users' Linear tokens encrypted at
+rest, and a mirror of the workspace's projects and initiatives for the planning sheet.
+Linear webhooks keep the mirror current within seconds, and a scheduled pass reconciles
+it in case a webhook is missed. The server talks to Linear's GraphQL API through a small
+client of its own rather than the SDK, so the cost of every query is known, and it backs
+off when Linear's rate limits are reached. Sign in with Linear is the only login.
+
+Node and pnpm versions are pinned in `mise.toml` and verified against checksums. Biome
+lints and formats, TypeScript runs in strict mode, Vitest runs unit tests and Playwright
+runs end-to-end tests. The repository prefers no new dependency over a small
+convenience. The choices and the alternatives considered are in
+[REC-003](https://github.com/ulyssesv/linear/blob/main/docs/records/003-repo-shape-and-toolchain.md).
+
+<h2 id="delivery">How it is released and deployed</h2>
+
+Every pull request runs the same CI: lint, typecheck, unit tests against a Postgres
+started from the repository's `compose.yaml`, the spec checks, a production build,
+Playwright tests against that build, and a container image build. The image is then run
+with the production security settings (non-root, read-only file system, all Linux
+capabilities dropped) against a throwaway database: it applies migrations, answers its health
+and readiness probes, and runs a sync pass against a stub of Linear's API. Pull-request
+titles must follow Conventional Commits, because they become the commit messages and
+the changelog.
+
+Releases are cut with release-please, which keeps a release pull request open on `main`
+with the next version and changelog. Merging it tags the release. A workflow then builds
+the image, runs the same container checks, and publishes it to the GitHub Container
+Registry with its digest in the release notes.
+
+The site runs on a single-node Kubernetes cluster at home, managed through Argo CD from a
+separate infra repository. This repository ships only the image and a written contract:
+port, probes, environment variables, security context and resource hints, in
+[`docs/deploy.md`](https://github.com/ulyssesv/linear/blob/main/docs/deploy.md). A deploy is two commits: the release tag here, and a change in the infra
+repository that pins the new image digest. Database migrations run as a job before each
+rollout. After a deploy, a smoke workflow, started by hand, checks the public site and
+confirms it serves the released commit. There are no preview environments per pull request, which
+is why CI tests the built server and the container itself. [REC-002](https://github.com/ulyssesv/linear/blob/main/docs/records/002-homelab-gitops-deployment.md)
+records why the site is deployed this way.
+
+<h2 id="process">Specs, records and the Linear loop</h2>
+
+The repository is the source of truth; Linear holds the tracking state. Two kinds of
+document live in the repository:
+
+- [Specs](https://github.com/ulyssesv/linear/tree/main/docs/specs) say what to build.
+  Each has numbered requirements, and each requirement is tagged with how it is verified:
+  a unit test, an end-to-end test, a CI check, or a person.
+- [Records](https://github.com/ulyssesv/linear/tree/main/docs/records) capture decisions:
+  the context, what was decided, the alternatives considered and the consequences.
+
+Both are mirrored one way into Linear documents, `SPEC-NNN` on the project or issue the
+spec belongs to and `REC-NNN` on the area's initiative, whenever a change to them is
+merged to `main`. Comments
+left on those documents in Linear are applied to the file, which is mirrored again, and
+the thread gets a reply saying what changed. Nothing flows from Linear into the files
+automatically.
+
+Each area of work is an initiative. A spec moves through draft, approved, implementing
+and done, and its parent project or issue moves with it. On approval, each task in the
+spec becomes a Linear issue. Each issue gets one pull request, on a branch named after
+the issue so that Linear links them, reviewed in Linear Diffs.
+
+`pnpm check:specs` keeps the documents and the code honest. It fails when a spec or
+record is malformed, when a requirement has no task, or when a test cites a requirement
+that does not exist. Once a spec is done, every requirement tagged for a unit or
+end-to-end test must be cited by one.
+
+The whole loop, step by step, is in
+[AGENTS.md](https://github.com/ulyssesv/linear/blob/main/AGENTS.md).
+
+<h2 id="ai">How AI is used in the work</h2>
+
+The work on this repository is done in sessions with Claude Code, an AI coding agent.
+The agent follows `AGENTS.md`, the same file a person would read; `CLAUDE.md` is a link
+to it, so there is one set of instructions, not two.
+
+A new spec starts with an interview: the agent asks the author about scope and
+alternatives before writing anything, and decides only what the spec needs now. The
+answers become the spec and, where a choice was made between alternatives, a record. The
+agent then mirrors the draft to Linear and stops until the author has reviewed it.
+
+Once a spec is approved, the agent works one issue at a time. It writes tests that cite
+the requirement ids, makes them pass, opens a pull request, moves the issue to In Review,
+and posts a summary of what changed, any manual steps and how to check the change by
+hand. Several sessions can work on separate issues at once, each in its own git
+worktree. The author reviews every pull request, approves it and merges it. The agent
+never merges, and no change reaches `main` without a pull request.
+
+Because the specs and records are the source of truth, each session starts from what the
+repository says rather than from earlier conversations. The checks do not rely on the
+agent's judgement: CI, the traceability check and the pull-request title check apply to
+its work as to anyone's. Changes to the agent's instructions are grouped as agent
+guidance in Linear Diffs, so they are reviewed as such.
