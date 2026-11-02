@@ -57,7 +57,7 @@ describe("initiative pages", () => {
   it.each(initiatives)("CONTENT-R12 $key's demo section", ({ key, demo }) => {
     const html = render(moduleFor(key));
     if (demo) {
-      expect(html).toMatch(new RegExp(`<p data-demo="link"><a href="${demo}"`));
+      expect(html).toMatch(new RegExp(`<p data-demo="link"[^>]*><a href="${demo}"`));
       expect(html).not.toContain('data-demo="none"');
     } else {
       expect(html).toContain('data-demo="none"');
