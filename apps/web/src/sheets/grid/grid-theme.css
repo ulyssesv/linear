@@ -1,0 +1,143 @@
+/* The grid's theme: the vendor's main theme with the site's shadcn tokens (styles.css)
+   in place of its colours, so the sheet follows light and dark like every other page.
+   Belongs with the adapter; a new grid gets a new theme. */
+
+.sheet-grid {
+  height: 100%;
+  width: 100%;
+}
+
+.sheet-grid .ht-theme-main {
+  --ht-font-family: inherit;
+  --ht-font-size: 13px;
+  --ht-line-height: 20px;
+  --ht-foreground-color: var(--foreground);
+  --ht-foreground-secondary-color: var(--muted-foreground);
+  --ht-background-color: var(--background);
+  --ht-background-secondary-color: var(--muted);
+  --ht-placeholder-color: var(--muted-foreground);
+  --ht-read-only-color: var(--foreground);
+  --ht-border-color: var(--border);
+  --ht-accent-color: var(--primary);
+  --ht-cell-horizontal-border-color: var(--border);
+  --ht-cell-vertical-border-color: var(--border);
+  --ht-cell-read-only-background-color: var(--background);
+  --ht-row-cell-odd-background-color: var(--background);
+  --ht-row-cell-even-background-color: var(--background);
+  --ht-cell-selection-border-color: var(--ring);
+  --ht-cell-selection-background-color: var(--ring);
+  --ht-header-foreground-color: var(--muted-foreground);
+  --ht-header-background-color: var(--muted);
+  --ht-header-highlighted-foreground-color: var(--foreground);
+  --ht-header-highlighted-background-color: var(--accent);
+  --ht-header-active-foreground-color: var(--primary-foreground);
+  --ht-header-active-background-color: var(--primary);
+  --ht-header-active-border-color: var(--primary);
+  --ht-resize-indicator-color: var(--ring);
+  --ht-move-indicator-color: var(--ring);
+  --ht-move-backlight-color: var(--muted);
+  --ht-link-color: var(--foreground);
+  --ht-link-hover-color: var(--muted-foreground);
+  --ht-scrollbar-thumb-color: var(--border);
+  --ht-scrollbar-track-color: var(--background);
+}
+
+.sheet-grid td.sheet-cell {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-grid td.sheet-cell > * + * {
+  margin-left: 6px;
+}
+
+.sheet-grid td[data-shape="number"],
+.sheet-grid td[data-shape="percent"] {
+  text-align: right;
+}
+
+.sheet-grid .sheet-badge,
+.sheet-grid .sheet-chip,
+.sheet-grid .sheet-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 4px);
+  padding: 0 6px;
+  font-size: 12px;
+  line-height: 18px;
+  vertical-align: middle;
+}
+
+.sheet-grid .sheet-badge {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+}
+
+.sheet-grid .sheet-flag {
+  border-color: transparent;
+  background: var(--muted-foreground);
+  color: var(--background);
+  font-weight: 500;
+}
+
+.sheet-grid .sheet-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+}
+
+.sheet-grid .sheet-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  font-size: 9px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.sheet-grid .sheet-bar {
+  display: inline-block;
+  width: 40px;
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--muted);
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.sheet-grid .sheet-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--primary);
+}
+
+.sheet-grid .sheet-muted {
+  color: var(--muted-foreground);
+}
+
+.sheet-grid .sheet-link {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.sheet-grid .sheet-number {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Archived and removed rows (MIRROR-R18): muted, with their flag at full strength. */
+.sheet-grid td.sheet-flagged > * {
+  opacity: 0.55;
+}
+
+.sheet-grid td.sheet-flagged > .sheet-flag {
+  opacity: 1;
+}

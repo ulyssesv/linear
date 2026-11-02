@@ -16,6 +16,8 @@ import { Route as SheetsRouteImport } from './routes/sheets'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthSignOutRouteImport } from './routes/auth/sign-out'
 import { Route as SheetsIndexRouteImport } from './routes/sheets/index'
+import { Route as SheetsInitiativesRouteImport } from './routes/sheets/initiatives'
+import { Route as SheetsProjectsRouteImport } from './routes/sheets/projects'
 import { Route as AuthLinearCallbackRouteImport } from './routes/auth/linear/callback'
 import { Route as AuthLinearSignInRouteImport } from './routes/auth/linear/sign-in'
 
@@ -54,6 +56,16 @@ const SheetsIndexRoute = SheetsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SheetsRoute,
 } as any)
+const SheetsInitiativesRoute = SheetsInitiativesRouteImport.update({
+  id: '/initiatives',
+  path: '/initiatives',
+  getParentRoute: () => SheetsRoute,
+} as any)
+const SheetsProjectsRoute = SheetsProjectsRouteImport.update({
+  id: '/projects',
+  path: '/projects',
+  getParentRoute: () => SheetsRoute,
+} as any)
 const AuthLinearCallbackRoute = AuthLinearCallbackRouteImport.update({
   id: '/auth/linear/callback',
   path: '/auth/linear/callback',
@@ -72,6 +84,8 @@ export interface FileRoutesByFullPath {
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/auth/sign-out': typeof AuthSignOutRoute
+  '/sheets/initiatives': typeof SheetsInitiativesRoute
+  '/sheets/projects': typeof SheetsProjectsRoute
   '/sheets/': typeof SheetsIndexRoute
   '/auth/linear/callback': typeof AuthLinearCallbackRoute
   '/auth/linear/sign-in': typeof AuthLinearSignInRoute
@@ -82,6 +96,8 @@ export interface FileRoutesByTo {
   '/readyz': typeof ReadyzRoute
   '/sign-in': typeof SignInRoute
   '/auth/sign-out': typeof AuthSignOutRoute
+  '/sheets/initiatives': typeof SheetsInitiativesRoute
+  '/sheets/projects': typeof SheetsProjectsRoute
   '/sheets': typeof SheetsIndexRoute
   '/auth/linear/callback': typeof AuthLinearCallbackRoute
   '/auth/linear/sign-in': typeof AuthLinearSignInRoute
@@ -94,6 +110,8 @@ export interface FileRoutesById {
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/auth/sign-out': typeof AuthSignOutRoute
+  '/sheets/initiatives': typeof SheetsInitiativesRoute
+  '/sheets/projects': typeof SheetsProjectsRoute
   '/sheets/': typeof SheetsIndexRoute
   '/auth/linear/callback': typeof AuthLinearCallbackRoute
   '/auth/linear/sign-in': typeof AuthLinearSignInRoute
@@ -107,6 +125,8 @@ export interface FileRouteTypes {
     | '/sheets'
     | '/sign-in'
     | '/auth/sign-out'
+    | '/sheets/initiatives'
+    | '/sheets/projects'
     | '/sheets/'
     | '/auth/linear/callback'
     | '/auth/linear/sign-in'
@@ -117,6 +137,8 @@ export interface FileRouteTypes {
     | '/readyz'
     | '/sign-in'
     | '/auth/sign-out'
+    | '/sheets/initiatives'
+    | '/sheets/projects'
     | '/sheets'
     | '/auth/linear/callback'
     | '/auth/linear/sign-in'
@@ -128,6 +150,8 @@ export interface FileRouteTypes {
     | '/sheets'
     | '/sign-in'
     | '/auth/sign-out'
+    | '/sheets/initiatives'
+    | '/sheets/projects'
     | '/sheets/'
     | '/auth/linear/callback'
     | '/auth/linear/sign-in'
@@ -195,6 +219,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SheetsIndexRouteImport
       parentRoute: typeof SheetsRoute
     }
+    '/sheets/initiatives': {
+      id: '/sheets/initiatives'
+      path: '/initiatives'
+      fullPath: '/sheets/initiatives'
+      preLoaderRoute: typeof SheetsInitiativesRouteImport
+      parentRoute: typeof SheetsRoute
+    }
+    '/sheets/projects': {
+      id: '/sheets/projects'
+      path: '/projects'
+      fullPath: '/sheets/projects'
+      preLoaderRoute: typeof SheetsProjectsRouteImport
+      parentRoute: typeof SheetsRoute
+    }
     '/auth/linear/callback': {
       id: '/auth/linear/callback'
       path: '/auth/linear/callback'
@@ -213,10 +251,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface SheetsRouteChildren {
+  SheetsInitiativesRoute: typeof SheetsInitiativesRoute
+  SheetsProjectsRoute: typeof SheetsProjectsRoute
   SheetsIndexRoute: typeof SheetsIndexRoute
 }
 
 const SheetsRouteChildren: SheetsRouteChildren = {
+  SheetsInitiativesRoute: SheetsInitiativesRoute,
+  SheetsProjectsRoute: SheetsProjectsRoute,
   SheetsIndexRoute: SheetsIndexRoute,
 }
 
