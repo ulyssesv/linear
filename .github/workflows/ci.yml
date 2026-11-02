@@ -84,7 +84,7 @@ jobs:
       - name: Install Playwright Chromium (SEED-R25)
         run: pnpm --filter @sesv/web exec playwright install --with-deps chromium
 
-      - name: End-to-end tests against the built server and the database service (SEED-R17, SEED-R20, SEED-R25, MIRROR-R5, MIRROR-R6, MIRROR-R8)
+      - name: End-to-end tests against the built server and the database service (SEED-R20, SEED-R25, MIRROR-R5, MIRROR-R6, MIRROR-R8)
         run: pnpm test:e2e
 
       - name: Docker build (SEED-R23)

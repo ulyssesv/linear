@@ -129,14 +129,18 @@ Non-goals:
 
 ### Placeholder site
 
-- **SEED-R17** (e2e) `GET /` renders the site name, a one-paragraph purpose, one card per
-  proof of concept (planning sheet, metrics rollup, AI SDLC) with a status label and a
-  link to its Linear initiative or spec, a link to the GitHub repository, and a footer
-  with the deployed version and short commit SHA.
+- **SEED-R17** (dropped) Replaced by CONTENT-R11 (the landing page, whose cards now link
+  to initiative pages that carry the Linear links) and CONTENT-R17 (the footer, whose
+  version, commit and repository link carry over unchanged). Was: `GET /` renders the site
+  name, a one-paragraph purpose, one card per proof of concept (planning sheet, metrics
+  rollup, AI SDLC) with a status label and a link to its Linear initiative or spec, a link
+  to the GitHub repository, and a footer with the deployed version and short commit SHA.
 - **SEED-R18** (unit) The landing route is server-rendered and readable with JavaScript
   disabled. Later routes may opt out of server rendering individually.
-- **SEED-R19** (manual) Styling uses Tailwind with the shadcn/ui baseline and follows the
-  system light or dark preference.
+- **SEED-R19** (dropped) Replaced by CONTENT-R15 (the look, on the same Tailwind and
+  shadcn/ui baseline) and CONTENT-R18 (theme following the system, with a cookie-backed
+  override). Was: styling uses Tailwind with the shadcn/ui baseline and follows the system
+  light or dark preference.
 - **SEED-R20** (e2e) `GET /healthz` returns 200 with `status`, `version` and `commit`
   whenever the process can serve requests. `GET /readyz` returns 200 with `status` and
   a `checks` object when every registered readiness check passes, and 503 naming the

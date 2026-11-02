@@ -18,6 +18,7 @@ import { Route as PlanningSheetRouteImport } from './routes/planning-sheet'
 import { Route as ReadyzRouteImport } from './routes/readyz'
 import { Route as SheetsRouteImport } from './routes/sheets'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as ThemeRouteImport } from './routes/theme'
 import { Route as ThisSiteRouteImport } from './routes/this-site'
 import { Route as AuthSignOutRouteImport } from './routes/auth/sign-out'
 import { Route as SheetsIndexRouteImport } from './routes/sheets/index'
@@ -72,6 +73,11 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ThemeRoute = ThemeRouteImport.update({
+  id: '/theme',
+  path: '/theme',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ThisSiteRoute = ThisSiteRouteImport.update({
   id: '/this-site',
   path: '/this-site',
@@ -123,6 +129,7 @@ export interface FileRoutesByFullPath {
   '/readyz': typeof ReadyzRoute
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/theme': typeof ThemeRoute
   '/this-site': typeof ThisSiteRoute
   '/auth/sign-out': typeof AuthSignOutRoute
   '/sheets/initiatives': typeof SheetsInitiativesRoute
@@ -141,6 +148,7 @@ export interface FileRoutesByTo {
   '/planning-sheet': typeof PlanningSheetRoute
   '/readyz': typeof ReadyzRoute
   '/sign-in': typeof SignInRoute
+  '/theme': typeof ThemeRoute
   '/this-site': typeof ThisSiteRoute
   '/auth/sign-out': typeof AuthSignOutRoute
   '/sheets/initiatives': typeof SheetsInitiativesRoute
@@ -161,6 +169,7 @@ export interface FileRoutesById {
   '/readyz': typeof ReadyzRoute
   '/sheets': typeof SheetsRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/theme': typeof ThemeRoute
   '/this-site': typeof ThisSiteRoute
   '/auth/sign-out': typeof AuthSignOutRoute
   '/sheets/initiatives': typeof SheetsInitiativesRoute
@@ -182,6 +191,7 @@ export interface FileRouteTypes {
     | '/readyz'
     | '/sheets'
     | '/sign-in'
+    | '/theme'
     | '/this-site'
     | '/auth/sign-out'
     | '/sheets/initiatives'
@@ -200,6 +210,7 @@ export interface FileRouteTypes {
     | '/planning-sheet'
     | '/readyz'
     | '/sign-in'
+    | '/theme'
     | '/this-site'
     | '/auth/sign-out'
     | '/sheets/initiatives'
@@ -219,6 +230,7 @@ export interface FileRouteTypes {
     | '/readyz'
     | '/sheets'
     | '/sign-in'
+    | '/theme'
     | '/this-site'
     | '/auth/sign-out'
     | '/sheets/initiatives'
@@ -239,6 +251,7 @@ export interface RootRouteChildren {
   ReadyzRoute: typeof ReadyzRoute
   SheetsRoute: typeof SheetsRouteWithChildren
   SignInRoute: typeof SignInRoute
+  ThemeRoute: typeof ThemeRoute
   ThisSiteRoute: typeof ThisSiteRoute
   AuthSignOutRoute: typeof AuthSignOutRoute
   WebhooksLinearRoute: typeof WebhooksLinearRoute
@@ -309,6 +322,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/theme': {
+      id: '/theme'
+      path: '/theme'
+      fullPath: '/theme'
+      preLoaderRoute: typeof ThemeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/this-site': {
@@ -395,6 +415,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReadyzRoute: ReadyzRoute,
   SheetsRoute: SheetsRouteWithChildren,
   SignInRoute: SignInRoute,
+  ThemeRoute: ThemeRoute,
   ThisSiteRoute: ThisSiteRoute,
   AuthSignOutRoute: AuthSignOutRoute,
   WebhooksLinearRoute: WebhooksLinearRoute,

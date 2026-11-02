@@ -1,17 +1,23 @@
 import { signInHref, signOutPath } from "@/auth";
+import { MenuIcon } from "@/components/icons";
+import { ThemeControl } from "@/components/theme-control";
 import type { SessionUser } from "@/server/auth/sessions";
 import { navigation, site } from "@/site";
+import type { Theme } from "@/theme";
 
 // The header of every page, public or demo (CONTENT-R3): the site name, the navigation
-// with the current page marked, the theme control's slot and the account control.
+// with the current page marked, the theme control (CONTENT-R18) and the account control.
 // Server-rendered and usable without JavaScript: below the small breakpoint the
-// navigation folds into a <details> menu (CONTENT-R6), and sign-out is a plain form POST.
+// navigation folds into a <details> menu (CONTENT-R6), and sign-out and the theme are
+// plain form POSTs.
 export function SiteHeader({
   user,
+  theme,
   pathname,
   href,
 }: Readonly<{
   user: SessionUser | null;
+  theme: Theme;
   /** The current path, for aria-current. */
   pathname: string;
   /** The current path with its query and hash, to return to after signing in or out. */
@@ -19,27 +25,34 @@ export function SiteHeader({
 }>) {
   const links = <NavLinks pathname={pathname} />;
   return (
-    <header className="border-b">
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3 text-sm">
-        <a href="/" className="font-semibold tracking-tight hover:text-muted-foreground">
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
+      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-6 py-2 text-[13px]">
+        <a
+          href="/"
+          className="font-semibold text-foreground text-sm tracking-[-0.01em] hover:text-foreground/80"
+        >
           {site.name}
         </a>
 
         <nav aria-label="Main" className="hidden flex-1 sm:block">
-          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1">{links}</ul>
+          <ul className="flex flex-wrap items-center gap-x-5 gap-y-1">{links}</ul>
         </nav>
 
         <div className="ml-auto flex items-center gap-3 sm:ml-0">
-          {/* The theme control (CONTENT-R18) arrives here with CONTENT T2. */}
-          <div data-slot="theme" />
+          <div data-slot="theme">
+            <ThemeControl theme={theme} href={href} />
+          </div>
           <AccountControl user={user} href={href} />
           <details className="group relative sm:hidden">
-            <summary className="cursor-pointer list-none rounded-md border px-2 py-1 [&::-webkit-details-marker]:hidden">
-              Menu
+            <summary
+              aria-label="Menu"
+              className="grid size-7 cursor-pointer list-none place-items-center rounded-md border text-muted-foreground hover:text-foreground group-open:bg-accent group-open:text-foreground [&::-webkit-details-marker]:hidden"
+            >
+              <MenuIcon />
             </summary>
             <nav
               aria-label="Main"
-              className="absolute right-0 z-10 mt-2 w-48 rounded-md border bg-background p-2 shadow-sm"
+              className="absolute right-0 z-10 mt-2 w-52 rounded-lg border bg-popover p-1.5 shadow-lg"
             >
               <ul className="flex flex-col">{links}</ul>
             </nav>
@@ -58,7 +71,7 @@ function NavLinks({ pathname }: Readonly<{ pathname: string }>) {
         <a
           href={item.href}
           aria-current={current ? "page" : undefined}
-          className="block py-1 text-muted-foreground hover:text-foreground aria-[current=page]:text-foreground"
+          className="block rounded-md px-2 py-1.5 text-muted-foreground transition-colors hover:text-foreground aria-[current=page]:text-foreground sm:px-0 sm:py-1"
         >
           {item.label}
         </a>
@@ -76,7 +89,7 @@ function AccountControl({ user, href }: Readonly<{ user: SessionUser | null; hre
         <>
           <span
             data-testid="signed-in-user"
-            className="max-w-32 truncate sm:max-w-48 text-muted-foreground"
+            className="max-w-28 truncate text-muted-foreground sm:max-w-44"
           >
             {user.name}
           </span>
@@ -84,7 +97,7 @@ function AccountControl({ user, href }: Readonly<{ user: SessionUser | null; hre
             <input type="hidden" name="next" value={href} />
             <button
               type="submit"
-              className="underline underline-offset-4 hover:text-muted-foreground"
+              className="rounded-md border px-2.5 py-1 text-foreground transition-colors hover:bg-accent"
             >
               Sign out
             </button>
@@ -93,7 +106,7 @@ function AccountControl({ user, href }: Readonly<{ user: SessionUser | null; hre
       ) : (
         <a
           href={signInHref(href)}
-          className="underline underline-offset-4 hover:text-muted-foreground"
+          className="rounded-md bg-primary px-2.5 py-1 font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           Sign in
         </a>

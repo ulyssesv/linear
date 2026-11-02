@@ -7,10 +7,13 @@ import type { ContentModule } from "../src/lib/content.ts";
 import { navigation, site } from "../src/site.ts";
 
 const modules = import.meta.glob<ContentModule>("../content/*.mdx", { eager: true });
-const contentPages = Object.entries(modules).map(([file, module]) => ({
-  path: `/${file.replace("../content/", "").replace(/\.mdx$/, "")}`,
-  meta: module.meta,
-}));
+// landing.mdx is the copy of `/`; every other file is the page of the same name.
+const contentPages = Object.entries(modules).map(([file, module]) => {
+  const name = file.replace("../content/", "").replace(/\.mdx$/, "");
+  return { path: name === "landing" ? "/" : `/${name}`, meta: module.meta };
+});
+const titleOf = (path: string, title: string) =>
+  path === "/" ? escapeHtml(title) : `${escapeHtml(title)} · ${site.name}`;
 
 type Fetch = (request: Request) => Promise<Response>;
 let fetchPage: Fetch;
@@ -32,7 +35,7 @@ const escapeHtml = (text: string) =>
 describe("public pages", () => {
   it("CONTENT-R1 every navigation target is a content page", () => {
     expect(contentPages.map((page) => page.path).sort()).toEqual(
-      navigation.map((item) => item.href).sort(),
+      ["/", ...navigation.map((item) => item.href)].sort(),
     );
   });
 
@@ -42,7 +45,9 @@ describe("public pages", () => {
       const { response, page } = await get(path);
       expect(response.status).toBe(200);
       expect(response.headers.get("content-type")).toMatch(/text\/html/);
-      expect(page).toContain(`<h1>${escapeHtml(meta.title)}</h1>`);
+      expect(page).toMatch(
+        new RegExp(`<h1[^>]*>${escapeHtml(meta.title).replaceAll(".", "\\.")}</h1>`),
+      );
     },
   );
 
@@ -51,13 +56,14 @@ describe("public pages", () => {
     async ({ path, meta }) => {
       const { page } = await get(path);
       expect(page.match(/<title>/g)).toHaveLength(1);
-      expect(page).toContain(`<title>${escapeHtml(meta.title)} · ${site.name}</title>`);
+      expect(page).toContain(`<title>${titleOf(path, meta.title)}</title>`);
       expect(page.match(/<meta name="description"/g)).toHaveLength(1);
       expect(page).toContain(`<meta name="description" content="${escapeHtml(meta.description)}"`);
     },
   );
 
-  it.each(contentPages)("CONTENT-R3 $path marks itself in the navigation", async ({ path }) => {
+  const navigated = contentPages.filter((page) => page.path !== "/");
+  it.each(navigated)("CONTENT-R3 $path marks itself in the navigation", async ({ path }) => {
     const { page } = await get(path);
     const current = [...page.matchAll(/<a [^>]*aria-current="page"[^>]*>/g)].map((m) => m[0]);
     // The wide navigation and the narrow menu each mark it once.

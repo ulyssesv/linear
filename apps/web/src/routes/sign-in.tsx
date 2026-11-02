@@ -32,7 +32,7 @@ function SignIn() {
   return (
     <PageContainer>
       <div className="max-w-xl space-y-6">
-        <h1 className="font-semibold text-3xl tracking-tight">Sign in</h1>
+        <h1 className="font-semibold text-3xl tracking-[-0.022em] sm:text-4xl">Sign in</h1>
         <p className="text-muted-foreground leading-relaxed">
           The demos read the Linear workspace this site is installed in. Members of that workspace
           sign in with their Linear account; every other page is open to anyone.
