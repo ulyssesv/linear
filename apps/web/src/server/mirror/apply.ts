@@ -8,11 +8,14 @@
 //   webhooks racing a bootstrap settle on the newest version (MIRROR-R10).
 // - Removal is a flag. markRemoved and markMissingRemoved set removed_at and never delete;
 //   a removed entity that Linear returns again comes back (MIRROR-R10).
+// - applyLatestUpdate and clearLatestUpdate set a project's or initiative's latest update
+//   from a project-update or initiative-update webhook event, which may arrive without a
+//   change to the parent's updatedAt (MIRROR-R11).
 // - recordSyncRun writes the sync log: every run's source, time, outcome and counts
 //   (MIRROR-R14). Each written row also carries its source and time.
 import type postgres from "postgres";
 import { type Row, tables } from "./tables.ts";
-import type { MirrorRecords, MirrorType, SyncSource } from "./types.ts";
+import type { LatestUpdate, MirrorRecords, MirrorType, SyncSource } from "./types.ts";
 
 /** postgres.js inside or outside a transaction. */
 export type Db = postgres.ISql;
@@ -152,4 +155,74 @@ export async function recordSyncRun(sql: Db, run: SyncRun): Promise<void> {
       ${sql.json((run.counts ?? {}) as postgres.JSONValue)}, ${run.error ?? null}
     )
   `;
+}
+
+/** The entity types that carry a latest update. */
+export type UpdatedType = "projects" | "initiatives";
+
+/**
+ * Sets the latest update of a project or initiative (a webhook project-update or
+ * initiative-update event). Writes only when the parent is in the mirror and not removed,
+ * and the update is either newer than the stored one (by createdAt) or the stored one
+ * edited (another excerpt or health). The parent's updated_at, Linear's own time, is left
+ * alone. Returns whether the row changed.
+ */
+export async function applyLatestUpdate(
+  sql: Db,
+  type: UpdatedType,
+  parentId: string,
+  update: LatestUpdate,
+  context: WriteContext,
+): Promise<boolean> {
+  const table = sql(tables[type].table);
+  const rows = await sql`
+    update ${table} set
+      last_update_id = ${update.id},
+      last_update_excerpt = ${update.excerpt},
+      last_update_health = ${update.health},
+      last_update_at = ${update.createdAt},
+      synced_at = ${context.at},
+      synced_source = ${context.source},
+      sync_seq = nextval('mirror_sync_seq')
+    where id = ${parentId}
+      and removed_at is null
+      and (
+        last_update_id is null
+        or (last_update_id <> ${update.id} and last_update_at < ${update.createdAt})
+        or (last_update_id = ${update.id} and (
+          last_update_excerpt is distinct from ${update.excerpt}
+          or last_update_health is distinct from ${update.health}
+        ))
+      )
+    returning id
+  `;
+  return rows.length > 0;
+}
+
+/**
+ * Clears the latest update of a project or initiative when that update was deleted or
+ * archived, only if it is still the stored one. The next reconcile fills in the update
+ * before it. Returns whether the row changed.
+ */
+export async function clearLatestUpdate(
+  sql: Db,
+  type: UpdatedType,
+  parentId: string,
+  updateId: string,
+  context: WriteContext,
+): Promise<boolean> {
+  const table = sql(tables[type].table);
+  const rows = await sql`
+    update ${table} set
+      last_update_id = null,
+      last_update_excerpt = null,
+      last_update_health = null,
+      last_update_at = null,
+      synced_at = ${context.at},
+      synced_source = ${context.source},
+      sync_seq = nextval('mirror_sync_seq')
+    where id = ${parentId} and removed_at is null and last_update_id = ${updateId}
+    returning id
+  `;
+  return rows.length > 0;
 }

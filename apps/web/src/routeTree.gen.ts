@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as HealthzRouteImport } from './routes/healthz'
 import { Route as ReadyzRouteImport } from './routes/readyz'
+import { Route as WebhooksLinearRouteImport } from './routes/webhooks/linear'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const ReadyzRoute = ReadyzRouteImport.update({
   path: '/readyz',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WebhooksLinearRoute = WebhooksLinearRouteImport.update({
+  id: '/webhooks/linear',
+  path: '/webhooks/linear',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/healthz': typeof HealthzRoute
   '/readyz': typeof ReadyzRoute
+  '/webhooks/linear': typeof WebhooksLinearRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/healthz': typeof HealthzRoute
   '/readyz': typeof ReadyzRoute
+  '/webhooks/linear': typeof WebhooksLinearRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/healthz': typeof HealthzRoute
   '/readyz': typeof ReadyzRoute
+  '/webhooks/linear': typeof WebhooksLinearRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/healthz' | '/readyz'
+  fullPaths: '/' | '/healthz' | '/readyz' | '/webhooks/linear'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/healthz' | '/readyz'
-  id: '__root__' | '/' | '/healthz' | '/readyz'
+  to: '/' | '/healthz' | '/readyz' | '/webhooks/linear'
+  id: '__root__' | '/' | '/healthz' | '/readyz' | '/webhooks/linear'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   HealthzRoute: typeof HealthzRoute
   ReadyzRoute: typeof ReadyzRoute
+  WebhooksLinearRoute: typeof WebhooksLinearRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReadyzRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/webhooks/linear': {
+      id: '/webhooks/linear'
+      path: '/webhooks/linear'
+      fullPath: '/webhooks/linear'
+      preLoaderRoute: typeof WebhooksLinearRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   HealthzRoute: HealthzRoute,
   ReadyzRoute: ReadyzRoute,
+  WebhooksLinearRoute: WebhooksLinearRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

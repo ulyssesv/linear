@@ -106,6 +106,26 @@ through the ingress, the webhook path from Linear's servers on the public intern
 local development add `http://localhost:3000/auth/linear/callback` as a second callback
 URL; a webhook needs a public tunnel, whose origin then becomes `PUBLIC_URL`.
 
+### Webhook endpoint
+
+`POST /webhooks/linear` keeps the mirror current within seconds (MIRROR-R11). What the
+ingress and the cluster must allow for it:
+
+| | |
+|---|---|
+| Reachability | From Linear's servers on the public internet, over HTTPS, `POST` only. No authentication at the ingress: the server checks Linear's signature itself. Bodies are a few kilobytes; the server refuses more than 1 MiB |
+| Response budget | Linear counts a delivery as failed when the answer takes more than 5 seconds or is not 200, and retries it after 1 minute, 1 hour and 6 hours; it may disable a webhook that keeps failing. The server answers within 4 seconds, so proxy timeouts must be longer than that and nothing in front of the pod may buffer or queue the request for long |
+| Clock | Deliveries whose signed timestamp is more than 60 seconds away from the pod's clock are refused as replays, so nodes must keep time with NTP |
+| Answers | 200 applied, ignored, out of scope or already seen; 401 unsigned, mis-signed or stale; 400 malformed; 413 too large; 500 database failure or timeout, which Linear retries |
+
+Each delivery is recorded in the `webhook_deliveries` table by its `Linear-Delivery` id in
+the same transaction as its mirror writes, so a retry or a replay is applied once. Each
+delivery also writes one JSON log line to stdout, `{"event":"linear-webhook",...}`, with
+the delivery id, type, action, entity id, outcome, status, counts and duration; never the
+body, the headers or the secret. A run of `unauthorized` lines means
+`LINEAR_WEBHOOK_SECRET` does not match the app's signing secret; `stale` lines mean clock
+skew.
+
 The server talks to `https://api.linear.app` (token endpoint and GraphQL) over HTTPS, so
 egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the fixture
 workspace costs about 14 requests and 40,000 complexity points of the hourly 5,000 and
