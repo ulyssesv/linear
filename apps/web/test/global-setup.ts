@@ -1,14 +1,18 @@
-// Builds the app and the CLI once for every test that needs the production output.
+// Builds the app and the CLI once for every test that needs the production output, and
+// creates a scratch database for the tests that need Postgres (MIRROR-R8).
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { build, createBuilder } from "vite";
 import type { TestProject } from "vitest/node";
+import { createScratchDatabase } from "./scratch-db.ts";
 
 declare module "vitest" {
   export interface ProvidedContext {
     dist: string;
     builtVersion: string;
     builtCommit: string;
+    /** A database of its own for this run, or the reason there is none. */
+    database: { url: string } | { error: string };
   }
 }
 
@@ -51,5 +55,19 @@ export default async function setup(project: TestProject) {
   project.provide("dist", dist);
   project.provide("builtVersion", builtVersion);
   project.provide("builtCommit", builtCommit);
-  return () => rm(dist, { recursive: true, force: true });
+
+  // Tests that need Postgres fail with this message when it cannot be reached; the rest
+  // still run. Skipping instead would let CI pass without testing the database.
+  const database = await createScratchDatabase("run").catch((error: unknown) =>
+    error instanceof Error ? error : new Error(String(error)),
+  );
+  project.provide(
+    "database",
+    database instanceof Error ? { error: database.message } : { url: database.url },
+  );
+
+  return async () => {
+    if (!(database instanceof Error)) await database.drop();
+    await rm(dist, { recursive: true, force: true });
+  };
 }
