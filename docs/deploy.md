@@ -31,7 +31,7 @@ out. The image carries no secrets and no environment-specific configuration.
 | `migrate` | Applies the pending schema migrations and exits 0, or non-zero on any failure. Run it as a Job before each rollout (see [Database](#database)) |
 | `scheduler` | Reserved. Exits with code 2 and a message naming the spec that will implement it, so a CronJob fails loudly until then |
 | Shutdown | Graceful on `SIGTERM` |
-| Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL` |
+| Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL`; one JSON line per sign-in (`{"event":"auth.sign_in","outcome":"accepted\|refused\|failed",...}`) and sign-out, naming the Linear user id, never a token, code or email |
 
 ## Probes
 
@@ -126,10 +126,53 @@ body, the headers or the secret. A run of `unauthorized` lines means
 `LINEAR_WEBHOOK_SECRET` does not match the app's signing secret; `stale` lines mean clock
 skew.
 
-The server talks to `https://api.linear.app` (token endpoint and GraphQL) over HTTPS, so
-egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the fixture
-workspace costs about 14 requests and 40,000 complexity points of the hourly 5,000 and
+The server talks to `https://api.linear.app` (token, revoke and GraphQL endpoints) over
+HTTPS, so egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the fixture
+workspace costs about 13 requests and 26,000 complexity points of the hourly 5,000 and
 2,000,000.
+
+## Sign-in and sessions
+
+Sign in with Linear is the only login (MIRROR-R15 to R17, REC-005). Every path is served
+by the pod on the app port and must pass through the ingress unchanged, cookies included,
+and must not be cached by the proxy (the server sends `cache-control: no-store`).
+
+| Path | Method | Public | What |
+|---|---|---|---|
+| `/sign-in` | GET | yes | Sign-in page with the "Sign in with Linear" button and refusal messages |
+| `/auth/linear/sign-in` | GET | yes | Redirects to Linear's authorize page, user actor, with `state` and PKCE (S256) |
+| `/auth/linear/callback` | GET | yes | OAuth redirect URI (see [Linear OAuth app](#linear-oauth-app)); creates the session |
+| `/auth/sign-out` | POST | yes | Ends the session and clears the cookie; cross-origin requests get 403 |
+| `/sheets` and below | GET | no | Redirect to `/sign-in` without a session |
+
+`/`, `/healthz` and `/readyz` stay public and never read the session store. A request
+without a session cookie does not touch the database for auth at all.
+
+A sign-in is accepted when the Linear user belongs to the workspace the OAuth app is
+installed in (learned from the app's own token), is not a guest, and, when
+`SIGNIN_ALLOWLIST` is set, has an email on it. Anyone else is sent back to `/sign-in`
+with a message; no session is created, nothing is stored, and the tokens Linear issued
+for the attempt are revoked.
+
+Cookies, both `HttpOnly`, `SameSite=Lax`, `Path=/`, and `Secure` with the `__Host-`
+prefix when `PUBLIC_URL` is https (bare names on plain-http development origins):
+
+| Cookie | Lifetime | Holds |
+|---|---|---|
+| `__Host-linear_session` | `Max-Age` 30 days | A random 256-bit session id. The database stores only its HMAC-SHA256 under `SESSION_SECRET` |
+| `__Host-linear_oauth` | 10 minutes, cleared by the callback | The signed sign-in attempt: `state`, PKCE verifier, return path |
+
+Sessions live in Postgres (`auth_sessions`). One ends after 7 days without a request
+(sliding; activity is recorded at most once an hour), 30 days after sign-in whatever
+the activity, or on sign-out. Expired rows are purged on each sign-in. Rotating
+`SESSION_SECRET` signs everyone out at once.
+
+Per-user Linear access and refresh tokens are stored in `auth_linear_tokens`, encrypted
+with AES-256-GCM under `TOKEN_ENCRYPTION_KEY` (a random IV per value, bound to the user
+and column, format `v1:<iv>:<ciphertext>:<tag>`), refreshed server-side shortly before
+the access token's 24-hour expiry, and never sent to the browser or logged. Losing or
+changing the key makes them unreadable; users then sign in again. They are unused until
+planning sheet P2.
 
 ## Database
 
