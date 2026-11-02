@@ -2,7 +2,7 @@
 // only: each test writes its own mirror rows through e2e/mirror.ts and signs in through
 // e2e/auth.ts; nothing here reaches Linear.
 import type { Locator, Page } from "@playwright/test";
-import { proofsOfConcept, site } from "../src/site.ts";
+import { initiativePages, site } from "../src/site.ts";
 import { type E2EMirror, expect, test } from "./mirror.ts";
 
 // Wide enough that every column renders: the grid only draws what is in view.
@@ -421,8 +421,8 @@ test.describe("client-only sheets", () => {
     }) => {
       await page.goto("/");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText(site.name);
-      await expect(page.getByText(site.purpose)).toBeVisible();
-      await expect(page.locator("[data-poc]")).toHaveCount(proofsOfConcept.length);
+      await expect(page.locator("[data-purpose]")).toBeVisible();
+      await expect(page.locator("[data-initiative]")).toHaveCount(initiativePages.length);
 
       await page.goto("/sign-in");
       await expect(page.getByRole("heading", { level: 1 })).toHaveText("Sign in");
