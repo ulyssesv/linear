@@ -14,6 +14,19 @@ test.describe("about page", () => {
     ).toBeVisible();
   });
 
+  test("CONTENT-R14 CONTENT-R22 /about shows the author's captioned photo beside the text", async ({
+    page,
+  }) => {
+    const photo = page.getByRole("main").getByRole("complementary").locator("img[data-photo]");
+    await expect(photo).toHaveAttribute("loading", "eager");
+    await expect(photo).toHaveAttribute("alt", /Ulysses/);
+    await expect(photo).toHaveJSProperty("complete", true);
+    expect(await photo.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
+    await expect(
+      page.getByRole("main").getByRole("complementary").locator("figcaption"),
+    ).toHaveText("Caucasus, October 2026");
+  });
+
   test("CONTENT-R14 /about shows a short biography, marked as placeholder", async ({ page }) => {
     const main = page.getByRole("main");
     await expect(main.locator("[data-excerpt]")).toHaveText(/\S/);

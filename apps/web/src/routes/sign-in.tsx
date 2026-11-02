@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { isSignInError, type SignInError, safeNext, signInErrors, signInStartPath } from "@/auth";
+import { LinearMark } from "@/components/linear-mark";
 import { PageContainer } from "@/components/page";
 import { site } from "@/site";
 
@@ -56,9 +57,10 @@ function SignIn() {
         ) : (
           <a
             href={start}
-            className="inline-flex h-10 items-center rounded-md bg-primary px-5 font-medium text-primary-foreground text-sm hover:bg-primary/90"
+            className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-5 font-medium text-primary-foreground text-sm hover:bg-primary/90"
           >
-            Sign in with Linear
+            <LinearMark className="size-4" />
+            Sign in<span className="sr-only"> with Linear</span>
           </a>
         )}
       </div>

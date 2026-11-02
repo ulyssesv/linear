@@ -65,7 +65,7 @@ test.describe("header", () => {
   test("CONTENT-R3 navigating marks the new page as current", async ({ page }) => {
     await page.goto("/");
     const nav = page.getByRole("banner").getByRole("navigation", { name: "Main" });
-    await nav.getByRole("link", { name: "This site" }).click();
+    await nav.getByRole("link", { name: "About this site" }).click();
     await expect(page).toHaveURL(/\/this-site$/);
     await expectHeader(page, "/this-site");
     await page.getByRole("link", { name: site.name, exact: true }).click();
@@ -80,12 +80,20 @@ test.describe("account control", () => {
   }) => {
     await page.goto("/metrics-rollup?from=e2e");
     const account = page.getByRole("navigation", { name: "Account" });
+    // Linear's logomark marks both sign-in controls, and nothing else (CONTENT-R16).
+    await expect(page.locator("[data-linear-mark]")).toHaveCount(1);
+    await expect(
+      account.getByRole("link", { name: "Sign in" }).locator("[data-linear-mark]"),
+    ).toBeVisible();
     await account.getByRole("link", { name: "Sign in" }).click();
     await expect(page).toHaveURL(/\/sign-in\?next=%2Fmetrics-rollup%3Ffrom%3De2e$/);
     await expect(page.getByRole("link", { name: "Sign in with Linear" })).toHaveAttribute(
       "href",
       "/auth/linear/sign-in?next=%2Fmetrics-rollup%3Ffrom%3De2e",
     );
+    await expect(
+      page.getByRole("link", { name: "Sign in with Linear" }).locator("[data-linear-mark]"),
+    ).toBeVisible();
   });
 
   test("CONTENT-R4 Linear sign-in starts with the page to return to", async ({ request }) => {
@@ -106,7 +114,11 @@ test.describe("account control", () => {
     await expect(page.getByTestId("signed-in-user")).toHaveText(user.name);
     await page.getByRole("link", { name: "Continue" }).click();
     await expect(page).toHaveURL(/\/about$/);
-    await expect(page.getByRole("button", { name: "Sign out" })).toBeVisible();
+    // The name and the sign-out button form one group, without Linear's mark.
+    const group = page.getByRole("navigation", { name: "Account" }).locator("[data-account]");
+    await expect(group.getByTestId("signed-in-user")).toHaveText(user.name);
+    await expect(group.getByRole("button", { name: "Sign out" })).toBeVisible();
+    await expect(page.locator("[data-linear-mark]")).toHaveCount(0);
   });
 
   test("CONTENT-R4 signing out on a public page stays there", async ({ page, signIn }) => {
@@ -160,6 +172,30 @@ test.describe("narrow viewport", () => {
     await link.click();
     await expect(page).toHaveURL(/\/planning-sheet$/);
   });
+});
+
+test.describe("header row", () => {
+  for (const signedIn of [false, true]) {
+    test(`CONTENT-R3 CONTENT-R6 the header stays one row at every width${signedIn ? ", signed in" : ""}`, async ({
+      page,
+      signIn,
+    }) => {
+      if (signedIn) await signIn({ name: "Someone With A Rather Long Display Name" });
+      // Signed in on a phone, the name and sign-out button take a second row (known).
+      const widths = signedIn
+        ? [640, 768, 900, 1023, 1024, 1280]
+        : [375, 640, 768, 900, 1023, 1024, 1280];
+      for (const width of widths) {
+        await page.setViewportSize({ width, height: 600 });
+        await page.goto("/about");
+        const height = await page
+          .getByRole("banner")
+          .evaluate((header: HTMLElement) => header.offsetHeight);
+        // 3.5rem plus the border; the sheet frame sizes itself below this height.
+        expect(height, `${width}px`).toBeLessThanOrEqual(57);
+      }
+    });
+  }
 });
 
 test.describe("titles", () => {

@@ -1,6 +1,6 @@
 // What the site ships is open source, or a demo library under a licence an accepted record
-// chooses, and is listed with its licence; no Linear mark is in the repository
-// (CONTENT-R16).
+// chooses, and is listed with its licence; no Linear mark is in the repository except the
+// logomark on the sign-in controls (CONTENT-R16).
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -148,6 +148,40 @@ describe("no Linear marks", () => {
   it("CONTENT-R16 no SVG file mentions Linear", () => {
     const svgs = all.filter((path) => path.endsWith(".svg"));
     for (const path of svgs) expect(readFileSync(join(web, path), "utf8")).not.toMatch(/linear/i);
+  });
+
+  it("CONTENT-R16 Linear's logomark is in one component, unaltered", () => {
+    const markPath = "M1.22541 61.5228c-.2225-.9485.90748-1.5459";
+    const holders = all.filter(
+      (path) => /\.(?:tsx?|css|mdx|html)$/.test(path) && !path.startsWith("test/"),
+    );
+    const withMark = holders.filter((path) =>
+      readFileSync(join(web, path), "utf8").includes(markPath),
+    );
+    expect(withMark).toEqual(["src/components/linear-mark.tsx"]);
+    const mark = readFileSync(join(web, "src/components/linear-mark.tsx"), "utf8");
+    // Brand kit logo-light.svg: one path, white fill, 100 by 100 view box.
+    expect(mark.match(/<path /g)).toHaveLength(1);
+    expect(mark).toContain('fill="#fff"');
+    expect(mark).toContain('viewBox="0 0 100 100"');
+    expect(mark).toMatch(/ZM12\.6587 18\.074c[^"]+L12\.6587 18\.074Z" \/>/);
+  });
+
+  it("CONTENT-R16 only the sign-in controls use Linear's logomark", () => {
+    const users = all.filter(
+      (path) =>
+        path.startsWith("src/") &&
+        /from "@\/components\/linear-mark"/.test(readFileSync(join(web, path), "utf8")),
+    );
+    expect(users.sort()).toEqual(["src/components/site-header.tsx", "src/routes/sign-in.tsx"]);
+    const header = readFileSync(join(web, "src/components/site-header.tsx"), "utf8");
+    expect(header.match(/<LinearMark/g)).toHaveLength(1);
+    expect(header).toMatch(
+      /href=\{signInHref\(href\)\}[\s\S]*?<LinearMark[\s\S]*?Sign in\s*<\/SiteLink>/,
+    );
+    const signIn = readFileSync(join(web, "src/routes/sign-in.tsx"), "utf8");
+    expect(signIn.match(/<LinearMark/g)).toHaveLength(1);
+    expect(signIn).toMatch(/href=\{start\}[\s\S]*?<LinearMark[\s\S]*?Sign in<span/);
   });
 
   it("CONTENT-R16 no source loads an asset from a Linear host", () => {

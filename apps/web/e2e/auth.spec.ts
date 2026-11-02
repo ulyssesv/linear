@@ -12,7 +12,7 @@ test.describe("public routes", () => {
 
   test("MIRROR-R15 the landing page offers sign-in and keeps its content", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("linear.sesv.co");
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cover Letter to Linear");
     await expect(page.getByRole("navigation", { name: "Account" })).toContainText("Sign in");
   });
 });

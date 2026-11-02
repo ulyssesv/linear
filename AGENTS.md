@@ -34,11 +34,16 @@ flows from Linear into files automatically.
   `apps/web/src/components/content.tsx`, which also holds the components copy may use.
   Every page sits in the shell of `routes/__root.tsx`: header, `<main>`, footer. Links
   between pages use `SiteLink` (`components/site-link.tsx`), which navigates without
-  reloading the document; MDX links get it automatically.
+  reloading the document; MDX links get it automatically. Photos are WebP files under
+  `apps/web/content/images`, one per width (`name-<width>.webp`, made with `cwebp`),
+  registered in `src/images.ts` and shown with `Photo`, or `<Figure image="name" />` in
+  copy; a test enforces the format, the size budget and the declared sizes.
 - `apps/web/THIRD_PARTY.md`: every font, icon set and library the site ships, with its
   licence. A test fails when a runtime dependency or a package imported by `styles.css`
   is missing there. Fonts are self-hosted from `@fontsource-variable` packages; icons are
-  Lucide paths inlined in `components/icons.tsx`. No Linear logo or asset, ever.
+  Lucide paths inlined in `components/icons.tsx`. No Linear logo or asset, except Linear's
+  logomark, unaltered, in `components/linear-mark.tsx` and only on the sign-in controls
+  (CONTENT-R16).
 - `apps/web/src/server/auth`: sign in with Linear, sessions and encrypted per-user tokens.
   Routes under `/sheets` require a session; signed-in end-to-end tests use the `signIn`
   fixture of `apps/web/e2e/auth.ts`, which writes a session to the e2e database.

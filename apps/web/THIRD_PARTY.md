@@ -7,9 +7,10 @@ below is missing here, or when a listed licence is not the one the package decla
 Everything is open source except what a demo uses under a licence an accepted decision
 record chooses; that row names the record.
 
-The site carries no Linear logo, logomark, wordmark or icon, and loads no Linear asset.
-It is styled after Linear's public site with the parts below, and its footer says it is
-an independent project.
+The site carries no Linear logo, wordmark or icon and loads no Linear asset, except
+Linear's logomark, unaltered, on the sign-in controls (CONTENT-R16). It is styled after
+Linear's public site with the parts below, and its footer says it is an independent
+project.
 
 ## Fonts
 
@@ -24,6 +25,12 @@ an independent project.
 | -- | -- | -- | -- |
 | Lucide (icons inlined in `src/components/icons.tsx`) | vendored | ISC | https://lucide.dev |
 | shadcn/ui (components copied into `src/components/ui`) | vendored | MIT | https://ui.shadcn.com |
+
+## Marks used by reference
+
+| Name | Package | Licence | Source |
+| -- | -- | -- | -- |
+| Linear logomark (`src/components/linear-mark.tsx`, sign-in controls only, unaltered) | vendored | Linear brand guidelines; proprietary to Linear | https://linear.app/brand |
 
 ## Demo libraries under a recorded licence
 

@@ -3,13 +3,17 @@ import { expect, test } from "@playwright/test";
 import { initiativePages, site } from "../src/site.ts";
 
 test.describe("landing page", () => {
-  test("CONTENT-R11 shows the purpose, one card per initiative, this site and the author", async ({
+  test("CONTENT-R11 shows the hero, one card per initiative, this site and the author", async ({
     page,
   }) => {
     const response = await page.goto("/");
     expect(response?.status()).toBe(200);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(site.name);
-    await expect(page.locator("[data-purpose]")).not.toBeEmpty();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Cover Letter to Linear");
+    await expect(page.locator("[data-purpose]")).toContainText("Hello!");
+    await expect(page.getByRole("banner").getByRole("link", { name: site.name })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Ideas & Experiments" }),
+    ).toBeVisible();
 
     const cards = page.locator("[data-initiative]");
     await expect(cards).toHaveCount(initiativePages.length);
@@ -24,13 +28,16 @@ test.describe("landing page", () => {
     }
 
     const thisSite = page.locator('[data-section="this-site"]');
-    await expect(thisSite.getByRole("heading", { level: 2 })).toHaveText("This site");
+    await expect(thisSite.getByRole("heading", { level: 2 })).toHaveText("About this site");
     await expect(thisSite.getByRole("link", { name: "How it is built" })).toHaveAttribute(
       "href",
       "/this-site",
     );
+    await expect(thisSite.locator("[data-summary]")).not.toBeEmpty();
     const about = page.locator('[data-section="about"]');
-    await expect(about.getByRole("link", { name: "More about the author" })).toHaveAttribute(
+    await expect(about.getByRole("heading", { level: 2 })).toHaveText("About me");
+    await expect(page.locator("img[data-photo]")).toHaveCount(0);
+    await expect(about.getByRole("link", { name: "More about me" })).toHaveAttribute(
       "href",
       "/about",
     );

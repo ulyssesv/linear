@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { mdxComponents } from "@/components/content";
+import { contentHead, mdxComponents } from "@/components/content";
 import { ArrowRightIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
 import { SiteLink } from "@/components/site-link";
@@ -11,10 +11,11 @@ import { meta as aiSdlc } from "../../content/ai-sdlc.mdx";
 import Landing, { meta } from "../../content/landing.mdx";
 import { meta as metricsRollup } from "../../content/metrics-rollup.mdx";
 import { meta as planningSheet } from "../../content/planning-sheet.mdx";
+import { summary } from "../../content/this-site.mdx";
 
-// The landing page (CONTENT-R11): the site's purpose, one card per initiative read from
-// that initiative's own page, a section about this site and the author excerpt shared
-// with /about (CONTENT-R14). Copy lives in content/landing.mdx and the files it names.
+// The landing page (CONTENT-R11): a hero with the title and the purpose, one card per
+// initiative read from that initiative's own page, a section about this site with the
+// summary from /this-site, and the author excerpt shared with /about (CONTENT-R14). Copy lives in content/landing.mdx and the files it names.
 const initiativeMeta: Record<InitiativeKey, ContentMeta> = {
   "planning-sheet": planningSheet,
   "metrics-rollup": metricsRollup,
@@ -32,9 +33,7 @@ const cards = initiativePages.map((page) => {
 });
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [{ title: meta.title }, { name: "description", content: meta.description }],
-  }),
+  head: contentHead(meta),
   component: LandingPage,
 });
 
@@ -55,14 +54,14 @@ function LandingPage() {
     <PageContainer>
       <section className="max-w-2xl">
         <h1 className="font-semibold text-4xl tracking-[-0.03em] sm:text-5xl">{meta.title}</h1>
-        <p data-purpose className="mt-5 text-lg text-muted-foreground leading-relaxed">
-          {meta.description}
-        </p>
+        <div data-purpose className="mt-5 space-y-3 text-lg text-muted-foreground leading-relaxed">
+          <Landing components={mdxComponents} />
+        </div>
       </section>
 
-      <section aria-labelledby="proposals" className="mt-16">
-        <h2 id="proposals" className="font-medium text-muted-foreground text-sm">
-          Proposals
+      <section aria-labelledby="ideas" className="mt-16">
+        <h2 id="ideas" className="font-medium text-muted-foreground text-sm">
+          Ideas &amp; Experiments
         </h2>
         <ul className="mt-4 grid gap-3 md:grid-cols-3">
           {cards.map((card) => (
@@ -82,7 +81,7 @@ function LandingPage() {
                 </div>
                 <p className="mt-2 text-muted-foreground text-sm leading-6">{card.summary}</p>
                 <span className="mt-auto inline-flex items-center gap-1.5 pt-6 font-medium text-brand text-sm">
-                  Read the proposal
+                  Read more
                   <ArrowRightIcon className="size-3.5 transition-transform group-hover:translate-x-0.5" />
                 </span>
               </SiteLink>
@@ -94,21 +93,21 @@ function LandingPage() {
       <div className="mt-16 grid gap-10 border-t pt-12 md:grid-cols-2">
         <section aria-labelledby="this-site" data-section="this-site">
           <h2 id="this-site" className="font-semibold text-lg tracking-[-0.01em]">
-            This site
+            About this site
           </h2>
-          <div className="mt-3 space-y-3 text-muted-foreground leading-7">
-            <Landing components={mdxComponents} />
-          </div>
+          <p data-summary className="mt-3 text-muted-foreground leading-7">
+            {summary}
+          </p>
           <MoreLink href="/this-site">How it is built</MoreLink>
         </section>
         <section aria-labelledby="about" data-section="about">
           <h2 id="about" className="font-semibold text-lg tracking-[-0.01em]">
-            About
+            About me
           </h2>
           <p data-excerpt className="mt-3 text-muted-foreground leading-7">
             {excerpt}
           </p>
-          <MoreLink href="/about">More about the author</MoreLink>
+          <MoreLink href="/about">More about me</MoreLink>
         </section>
       </div>
     </PageContainer>
