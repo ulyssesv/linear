@@ -29,6 +29,9 @@ flows from Linear into files automatically.
 - `apps/web/src/server/db`: Postgres access (`database()`, `createSql()`) and the
   migration runner. Migrations are `migrations/NNNN_slug.sql`, applied in order by the
   image's `migrate` command; add the next number, never edit a released one.
+- `apps/web/src/server/auth`: sign in with Linear, sessions and encrypted per-user tokens.
+  Routes under `/sheets` require a session; signed-in end-to-end tests use the `signIn`
+  fixture of `apps/web/e2e/auth.ts`, which writes a session to the e2e database.
 - `compose.yaml`: the local Postgres, also started by CI. Tests and the dev server use it
   unless `DATABASE_URL` says otherwise.
 - `docs/deploy.md`: the hand-off to infra: image, port, probes, env contract, security context.
