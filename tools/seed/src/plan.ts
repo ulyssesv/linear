@@ -9,6 +9,7 @@ import {
   fixtureKeyOf,
   type LabelGroupFixture,
   type LabelRef,
+  STATUS_SLOTS,
 } from "./fixtures.ts";
 import {
   type GuardContext,
@@ -203,14 +204,23 @@ export function planSeed(fixtures: FixtureSet, ws: Workspace, options: PlanOptio
   const memberFor = (slot: number | null) =>
     slot === null || members.length === 0 ? null : (members[slot % members.length]?.id ?? null);
 
-  const statusFor = new Map<string, ProjectStatus>();
-  for (const type of PROJECT_STATUS_TYPES) {
-    const status = ws.projectStatuses
-      .filter((s) => s.type === type && s.teamId === null)
-      .sort((a, b) => a.position - b.position)[0];
-    if (status) statusFor.set(type, status);
-    else errors.push(`No workspace project status of type ${type}`);
+  // Every workspace project status, in type order then position; fixtures pick by slot, so
+  // they span whichever statuses exist (a workspace need not have every type, e.g. paused).
+  const typeOrder = (type: string) => {
+    const i = (PROJECT_STATUS_TYPES as readonly string[]).indexOf(type);
+    return i === -1 ? PROJECT_STATUS_TYPES.length : i;
+  };
+  const statuses = ws.projectStatuses
+    .filter((s) => s.teamId === null)
+    .sort((a, b) => typeOrder(a.type) - typeOrder(b.type) || a.position - b.position);
+  if (statuses.length === 0) errors.push("No workspace project status");
+  else if (statuses.length > STATUS_SLOTS) {
+    warnings.push(
+      `${statuses.length} project statuses but ${STATUS_SLOTS} status slots; ` +
+        `${statuses.length - STATUS_SLOTS} statuses get no fixture`,
+    );
   }
+  const statusFor = (slot: number) => statuses[slot % statuses.length] as ProjectStatus;
   if (errors.length > 0) return { entries: [], warnings, errors };
 
   // Display names for the printed plan.
@@ -360,7 +370,7 @@ export function planSeed(fixtures: FixtureSet, ws: Workspace, options: PlanOptio
       description: descriptionFor(f.key),
       teamIds,
       leadTeamId: teamIds[0] as string,
-      statusId: (statusFor.get(f.statusType) as ProjectStatus).id,
+      statusId: statusFor(f.statusSlot).id,
       leadId: memberFor(f.leadSlot),
       startDate: f.startDate,
       targetDate: f.targetDate,

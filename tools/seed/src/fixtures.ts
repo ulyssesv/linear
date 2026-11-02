@@ -1,14 +1,9 @@
 // The fixture set for the planning sheet (MIRROR-R27), generated from a fixed seed so every run
 // asks for the same entities. Pure: no workspace ids here, only slots that the planner resolves
 // against the workspace (team slot 0 is the `Test` team, 1.. its sub-teams by key; user slots
-// index the workspace's members by email).
-import {
-  type GroupType,
-  INITIATIVE_STATUSES,
-  type InitiativeStatus,
-  PROJECT_STATUS_TYPES,
-  type ProjectStatusType,
-} from "./model.ts";
+// index the workspace's members by email; status slots index the workspace's project statuses
+// in type order, so the fixtures cover whichever statuses the workspace has).
+import { type GroupType, INITIATIVE_STATUSES, type InitiativeStatus } from "./model.ts";
 
 /** Identity marker carried in every fixture description, followed by the fixture key. */
 export const MARKER = "seed-fixture:";
@@ -28,7 +23,7 @@ export type ProjectFixture = {
   key: string;
   name: string;
   teamSlots: number[];
-  statusType: ProjectStatusType;
+  statusSlot: number;
   leadSlot: number | null;
   startDate: string | null;
   targetDate: string | null;
@@ -176,6 +171,8 @@ const MULTI_TEAM = [
   [1, 2, 3],
 ];
 const LEAD_SLOTS = 6;
+/** More than a workspace usually has; the first fixtures take one slot each. */
+export const STATUS_SLOTS = 12;
 const TEAM_SLOTS = 4;
 const BASE_DATE = Date.UTC(2026, 0, 5);
 const WEEK = 7 * 24 * 60 * 60 * 1000;
@@ -256,10 +253,7 @@ export function generateFixtures(seed = DEFAULT_SEED): FixtureSet {
   const projects: ProjectFixture[] = projectNames.map((name, i) => {
     // The first few fixtures pin coverage so a different seed cannot lose a status or team.
     const teamSlots = teamSlotsFor(i, rand);
-    const statusType =
-      i < PROJECT_STATUS_TYPES.length
-        ? (PROJECT_STATUS_TYPES[i] as ProjectStatusType)
-        : pick(PROJECT_STATUS_TYPES, rand);
+    const statusSlot = i < STATUS_SLOTS ? i : Math.floor(rand() * STATUS_SLOTS);
     const leadSlot = rand() < 0.1 ? null : Math.floor(rand() * LEAD_SLOTS);
     const start = rand() < 0.15 ? null : BASE_DATE + Math.floor(rand() * 80) * WEEK;
     const target =
@@ -278,7 +272,7 @@ export function generateFixtures(seed = DEFAULT_SEED): FixtureSet {
       key: `P${String(i + 1).padStart(3, "0")}`,
       name,
       teamSlots,
-      statusType,
+      statusSlot,
       leadSlot,
       startDate: start === null ? null : day(start),
       targetDate: target === null ? null : day(target),

@@ -260,10 +260,25 @@ describe("planSeed errors", () => {
     expect(result.entries).toEqual([]);
   });
 
-  it("MIRROR-R27 fails when a project status type has no workspace status", () => {
+  it("MIRROR-R27 spans the statuses the workspace has when a type is missing", () => {
     const ws = workspace();
     ws.projectStatuses = ws.projectStatuses.filter((s) => s.type !== "paused");
-    expect(plan(ws).errors.join()).toMatch(/paused/);
+    const result = plan(ws);
+    expect(result.errors).toEqual([]);
+    const used = new Set(
+      steps(result.entries).flatMap((s) =>
+        s.kind === "project" && s.op === "create" ? [s.input.statusId] : [],
+      ),
+    );
+    expect(used).toEqual(
+      new Set(ws.projectStatuses.filter((s) => s.teamId === null).map((s) => s.id)),
+    );
+  });
+
+  it("MIRROR-R27 fails when the workspace has no project status", () => {
+    const ws = workspace();
+    ws.projectStatuses = [];
+    expect(plan(ws).errors.join()).toMatch(/No workspace project status/);
   });
 
   it("MIRROR-R27 warns and leaves leads empty when the workspace has no assignable member", () => {

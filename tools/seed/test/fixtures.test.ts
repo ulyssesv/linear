@@ -5,8 +5,9 @@ import {
   generateFixtures,
   LABEL_PREFIX,
   MARKER,
+  STATUS_SLOTS,
 } from "../src/fixtures.ts";
-import { INITIATIVE_STATUSES, PROJECT_STATUS_TYPES } from "../src/model.ts";
+import { INITIATIVE_STATUSES } from "../src/model.ts";
 
 const fixtures = generateFixtures();
 
@@ -25,9 +26,9 @@ describe("generateFixtures", () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it("MIRROR-R27 spans every project status type and every initiative status", () => {
-    expect(new Set(fixtures.projects.map((p) => p.statusType))).toEqual(
-      new Set(PROJECT_STATUS_TYPES),
+  it("MIRROR-R27 spans every project status slot and every initiative status", () => {
+    expect(new Set(fixtures.projects.map((p) => p.statusSlot))).toEqual(
+      new Set(Array.from({ length: STATUS_SLOTS }, (_, i) => i)),
     );
     expect(new Set(fixtures.initiatives.map((i) => i.status))).toEqual(
       new Set(INITIATIVE_STATUSES),
