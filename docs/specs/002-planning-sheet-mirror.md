@@ -6,7 +6,7 @@ area: planning-sheet
 linear:
   initiative: https://linear.app/sesv/initiative/planning-sheet-7f1a80410512
   parent: https://linear.app/sesv/project/workspace-mirror-and-read-only-sheet-55cadea80f8b
-  document:
+  document: https://linear.app/sesv/document/spec-002-workspace-mirror-and-read-only-sheet-674d255000f2
 supersedes: []
 created: 2026-11-02
 ---

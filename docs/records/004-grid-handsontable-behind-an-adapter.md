@@ -8,7 +8,7 @@ spec: MIRROR
 supersedes: []
 linear:
   initiative: https://linear.app/sesv/initiative/planning-sheet-7f1a80410512
-  document:
+  document: https://linear.app/sesv/document/rec-004-grid-is-handsontable-behind-an-adapter-under-the-non-61e053b147b0
 ---
 
 # REC-004: Grid is Handsontable behind an adapter, under the non-commercial license

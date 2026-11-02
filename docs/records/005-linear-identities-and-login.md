@@ -8,7 +8,7 @@ spec: MIRROR
 supersedes: []
 linear:
   initiative: https://linear.app/sesv/initiative/planning-sheet-7f1a80410512
-  document:
+  document: https://linear.app/sesv/document/rec-005-linear-identities-are-the-oauth-apps-client-credentials-for-bcd190cf6b88
 ---
 
 # REC-005: Linear identities are the OAuth app's client credentials for the mirror and sign in with Linear for users
