@@ -5,9 +5,14 @@
 # (runAsNonRoot, allowPrivilegeEscalation: false, capabilities.drop: [ALL],
 # seccompProfile: RuntimeDefault, readOnlyRootFilesystem) against a throwaway Postgres on
 # a private Docker network: `migrate` applies the migrations and is safe to run again,
-# `serve` answers /healthz and is ready on /readyz, and `scheduler` behaves as specified.
+# `serve` answers /healthz and is ready on /readyz, and `scheduler` runs a pass and exits 0,
+# first bootstrapping the empty mirror, then reconciling it with the app token it stored.
 # serve gets the throwaway database and harmless placeholders for its other required
 # names, and must refuse to start without its environment.
+#
+# The smoke has no Linear credentials and never reaches Linear: `scheduler` talks to
+# tools/linear-stub.mjs, run with the image's own Node on the same network, through
+# LINEAR_API_URL, a name only tests and this smoke set.
 #
 # Usage: tools/container-smoke.sh <image>
 # Optional env: EXPECTED_VERSION (exact), EXPECTED_COMMIT (prefix, so a short SHA works),
@@ -19,6 +24,7 @@ image=${1:?usage: tools/container-smoke.sh <image>}
 timeout=${SMOKE_TIMEOUT:-30}
 name="linear-smoke-$$"
 db="linear-smoke-db-$$"
+stub="linear-smoke-stub-$$"
 network="linear-smoke-$$"
 root=$(cd "$(dirname "$0")/.." && pwd)
 postgres_image=${POSTGRES_IMAGE:-$(docker compose -f "$root/compose.yaml" config --images postgres)}
@@ -28,7 +34,7 @@ database_url="postgres://linear:linear@${db}:5432/linear"
 hardening=(--user 10001 --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /tmp)
 
 cleanup() {
-  docker rm -f "$name" "$db" >/dev/null 2>&1 || true
+  docker rm -f "$name" "$db" "$stub" >/dev/null 2>&1 || true
   docker network rm "$network" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
@@ -123,13 +129,33 @@ ready=$(curl --silent --fail --max-time 5 "http://127.0.0.1:${host_port}/readyz"
 [[ $ready == *'"database":{"status":"ok"}'* ]] || fail "/readyz has no passing database check: $ready"
 pass "/readyz answered: $ready"
 
-# SEED-R24: scheduler is still reserved and exits 2.
-# MIRROR T5 turns this into a run against the throwaway database that must exit 0
-# (MIRROR-R13); the command line below already passes it DATABASE_URL.
+# MIRROR-R13: scheduler runs one pass against the throwaway database and exits 0. Linear is
+# the stub, run hardened with the image's own Node; the credentials are placeholders.
+docker run --detach --name "$stub" "${hardening[@]}" --network "$network" --entrypoint node \
+  "$image" --input-type=module --eval "$(cat "$root/tools/linear-stub.mjs")" >/dev/null
+deadline=$((SECONDS + timeout))
+until docker logs "$stub" 2>&1 | grep -q "linear-stub: listening"; do
+  ((SECONDS < deadline)) || fail "the Linear stub did not start within ${timeout}s"
+  sleep 1
+done
+scheduler_env=(
+  --env DATABASE_URL="$database_url"
+  --env LINEAR_API_URL="http://${stub}:8080"
+  "${serve_env[@]}"
+)
+output=$(oneoff "${scheduler_env[@]}" "$image" scheduler 2>&1) || fail "'scheduler' exited non-zero: $output"
+[[ $output == *'"outcome":"ok"'*'"source":"bootstrap"'* ]] || fail "'scheduler' did not bootstrap the empty mirror: $output"
+pass "'scheduler' bootstrapped the empty mirror and exited 0"
+output=$(oneoff "${scheduler_env[@]}" "$image" scheduler 2>&1) || fail "'scheduler' run again exited non-zero: $output"
+[[ $output == *'"outcome":"ok"'*'"source":"reconcile"'* ]] || fail "'scheduler' run again did not reconcile: $output"
+pass "'scheduler' reconciled and exited 0: $output"
+tokens=$(docker logs "$stub" 2>&1 | grep -c "linear-stub: token" || true)
+[[ $tokens == 1 ]] || fail "two scheduler runs requested $tokens app tokens, want 1 (the second reuses the stored one)"
+pass "two scheduler runs shared one app token"
 code=0
-oneoff --env DATABASE_URL="$database_url" "$image" scheduler >/dev/null 2>&1 || code=$?
-[[ $code == 2 ]] || fail "'scheduler' exited $code, want 2"
-pass "'scheduler' is reserved and exits 2"
+oneoff "${scheduler_env[@]}" --env DATABASE_URL="postgres://linear:linear@${db}:1/linear" "$image" scheduler >/dev/null 2>&1 || code=$?
+[[ $code != 0 ]] || fail "'scheduler' exited 0 against an unreachable database"
+pass "'scheduler' exits $code when the database cannot be reached"
 
 # MIRROR-R7: serve refuses to start without its environment, naming what is missing.
 code=0

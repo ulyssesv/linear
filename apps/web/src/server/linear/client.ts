@@ -12,9 +12,14 @@
 //   hanging. https://linear.app/developers/rate-limiting
 // - Any other HTTP or GraphQL error is thrown, not retried. Errors never carry the token.
 
-import { type AppTokenProvider, type AppTokenStore, createAppTokenProvider } from "./token.ts";
+import {
+  type AppTokenProvider,
+  type AppTokenStore,
+  createAppTokenProvider,
+  linearApiOrigin,
+} from "./token.ts";
 
-export const linearGraphqlUrl = "https://api.linear.app/graphql";
+export const linearGraphqlUrl = `${linearApiOrigin}/graphql`;
 
 export type LinearResponseInfo = {
   status: number;
@@ -35,6 +40,9 @@ export type LinearClientOptions = {
   maxWaitMs?: number;
   /** Called for every GraphQL response, for logging and budget accounting. */
   onResponse?: (info: LinearResponseInfo) => void;
+  /** Origin of Linear's API. Tests and the container smoke point it at a stub; production
+   * never sets it (LINEAR_API_URL in docs/deploy.md). */
+  apiUrl?: string;
 };
 
 export type LinearClient = {
@@ -138,6 +146,7 @@ export function createLinearClient(options: LinearClientOptions): LinearClient {
     options.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
   const maxRetries = options.maxRateLimitRetries ?? 5;
   const maxWaitMs = options.maxWaitMs ?? 15 * 60 * second;
+  const graphqlUrl = options.apiUrl ? `${options.apiUrl}/graphql` : linearGraphqlUrl;
 
   return {
     async request<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
@@ -145,7 +154,7 @@ export function createLinearClient(options: LinearClientOptions): LinearClient {
       let rateLimited = 0;
       for (;;) {
         const token = await options.tokens.getToken();
-        const response = await fetch(linearGraphqlUrl, {
+        const response = await fetch(graphqlUrl, {
           method: "POST",
           headers: {
             authorization: `Bearer ${token}`,
@@ -223,6 +232,7 @@ export function createAppLinearClient(
     fetch: options.fetch,
     now: options.now,
     store: tokenStore,
+    apiUrl: options.apiUrl,
   });
   return createLinearClient({ ...clientOptions, tokens });
 }

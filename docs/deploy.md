@@ -29,9 +29,9 @@ out. The image carries no secrets and no environment-specific configuration.
 | Entrypoint | `node dist/cli.mjs <command>` in `/app` |
 | `serve` | Default command. Starts the web server |
 | `migrate` | Applies the pending schema migrations and exits 0, or non-zero on any failure. Run it as a Job before each rollout (see [Database](#database)) |
-| `scheduler` | Reserved. Exits with code 2 and a message naming the spec that will implement it, so a CronJob fails loudly until then |
+| `scheduler` | Runs one sync pass of the workspace mirror and exits 0, or non-zero on any failure. Run it as a CronJob (see [Scheduler](#scheduler)) |
 | Shutdown | Graceful on `SIGTERM` |
-| Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL` |
+| Logs | stdout and stderr; one start line with version, commit and `PUBLIC_URL`; one JSON line per `scheduler` pass |
 
 ## Probes
 
@@ -66,17 +66,15 @@ here in the same pull request.
 | `LINEAR_CLIENT_SECRET` | `serve`, `scheduler` | required | Client secret of the Linear OAuth app; no whitespace. Rotating it revokes every app token; the server renews on the next call |
 | `LINEAR_WEBHOOK_SECRET` | `serve` | required | Signing secret of the OAuth app's webhook; no whitespace |
 | `SESSION_SECRET` | `serve` | required | Signs session cookies; at least 32 characters, e.g. `openssl rand -base64 32` |
-| `TOKEN_ENCRYPTION_KEY` | `serve` | required | AES-256 key for per-user Linear tokens at rest: exactly 32 bytes in standard base64 (44 characters), from `openssl rand -base64 32`. Changing it makes stored tokens unreadable, so users sign in again |
+| `TOKEN_ENCRYPTION_KEY` | `serve`, `scheduler` | required | AES-256 key for Linear tokens at rest, the per-user tokens and the app token: exactly 32 bytes in standard base64 (44 characters), from `openssl rand -base64 32`. Both commands need the same value. Changing it makes stored tokens unreadable, so users sign in again and the next pass requests a new app token |
 | `SIGNIN_ALLOWLIST` | `serve` | unset | Optional. Comma-separated emails allowed to sign in, compared case-insensitively; blanks are ignored. Unset or blank lets every member of the workspace sign in |
-
-`scheduler` is still reserved in this release and exits 2 before reading its
-environment; the names above are what it will require once implemented.
+| `LINEAR_API_URL` | `scheduler` | unset | Not for production: leave it unset. An origin that replaces `https://api.linear.app` for the token and GraphQL endpoints, so tests and the container smoke run a pass against a stub without credentials |
 
 All required names except `PORT` and `PUBLIC_URL` are secrets. Infra holds them as sops
 secrets and injects them as environment variables; nothing else holds them, and the image
 carries none. The `serve` Deployment needs all of them; the `migrate` Job only
-`DATABASE_URL`; the `scheduler` CronJob `DATABASE_URL`, `LINEAR_CLIENT_ID` and
-`LINEAR_CLIENT_SECRET`. The first release with these names will not start `serve` until
+`DATABASE_URL`; the `scheduler` CronJob `DATABASE_URL`, `LINEAR_CLIENT_ID`,
+`LINEAR_CLIENT_SECRET` and `TOKEN_ENCRYPTION_KEY`. The first release with these names will not start `serve` until
 the secrets exist, so create them before pinning it.
 
 Reserved: accepted and passed through unvalidated, unused until the spec that needs them
@@ -109,7 +107,7 @@ URL; a webhook needs a public tunnel, whose origin then becomes `PUBLIC_URL`.
 The server talks to `https://api.linear.app` (token endpoint and GraphQL) over HTTPS, so
 egress must allow it. Calls back off on Linear's rate limits; a bootstrap of the fixture
 workspace costs about 14 requests and 40,000 complexity points of the hourly 5,000 and
-2,000,000.
+2,000,000; a reconcile pass about 10 requests and 8,000 points.
 
 ## Database
 
@@ -119,7 +117,7 @@ The site needs one PostgreSQL database (MIRROR, planning sheet P1).
 |---|---|
 | Version | PostgreSQL 18. CI and local development run `postgres:18.6`, pinned in `compose.yaml` |
 | Logical replication | On from the start: `wal_level = logical`. Unused until Electric arrives in P3, which then needs a role with `REPLICATION` and a few replication slots; setting it now avoids a restart and a database change later |
-| Connection | Direct to Postgres, not through PgBouncer or another transaction pooler: logical replication and session features need a real session. The server keeps a pool of at most 10 connections per replica; `migrate` uses one |
+| Connection | Direct to Postgres, not through PgBouncer or another transaction pooler: logical replication and session features need a real session. The server keeps a pool of at most 10 connections per replica; `migrate` uses one, `scheduler` up to three and holds a session-level advisory lock for its pass |
 | Role | Owns the database, or may create tables, indexes and types in its `public` schema. No superuser needed |
 | TLS | Add `sslmode` and friends to the URL as query parameters if the server requires them |
 
@@ -167,6 +165,91 @@ Migrations are written so the previous release still runs against the new schema
 (expand first, contract in a later release): pods of the old release keep serving while
 the Job runs and until the rollout replaces them.
 
+## Scheduler
+
+`node dist/cli.mjs scheduler` runs one sync pass of the workspace mirror (MIRROR-R13) and
+exits: 0 when the pass succeeded, or when another pass was already running; 1 when the
+environment is invalid, the database cannot be reached, or the pass failed. A failed pass
+changes nothing in the mirror and is retried in full by the next run, so the CronJob's
+history shows the truth and nothing is lost by failing.
+
+A pass:
+
+- Bootstraps when the mirror is empty, the first run after the first rollout included:
+  it lists every entity type in full. For the fixture workspace that is about 14
+  requests and takes seconds.
+- Otherwise reconciles: lists the reference data (teams, users, statuses, labels) in
+  full, projects and initiatives changed since the start of the last successful pass
+  minus 15 minutes, and the ids of every project and initiative to flag the deleted or
+  trashed ones removed. Staleness is therefore bounded by the schedule, whatever happens
+  to webhooks.
+- Takes a Postgres advisory lock first. A run that finds it taken logs
+  `"outcome":"skipped","reason":"another pass is running"` and exits 0 without touching
+  Linear. `concurrencyPolicy: Forbid` makes that rare; the lock makes it safe.
+- Reuses the OAuth app's token, stored encrypted in the database with
+  `TOKEN_ENCRYPTION_KEY`; it requests a new one only when the stored one is missing,
+  close to its 30-day expiry, or rejected. Linear allows 1000 active app tokens per app,
+  so a run must never mint one each time.
+- Uses at most 3 database connections and closes them before exiting.
+
+Each run leaves one JSON line: on stdout when it succeeded or skipped, on stderr when it
+failed. For example:
+
+```json
+{"event":"scheduler","outcome":"ok","source":"reconcile","startedAt":"2026-11-02T10:00:00.000Z","finishedAt":"2026-11-02T10:00:02.512Z","durationMs":2512,"since":"2026-11-02T09:35:00.000Z","changed":3,"counts":{"projects":{"inserted":1,"updated":1,"unchanged":0,"removed":1,"dropped":0},"...":{}},"linear":{"requests":10,"complexity":8345}}
+{"event":"scheduler","outcome":"failed","source":"reconcile","startedAt":"...","finishedAt":"...","durationMs":412,"error":"Linear API HTTP 503","linear":{"requests":3,"complexity":600}}
+```
+
+`source` is `bootstrap` or `reconcile`; `since` is the start of the window, `null` for a
+full listing; `counts` has one entry per entity type. Every pass is also recorded in the
+`mirror_sync_log` table with the same outcome and counts.
+
+Suggested CronJob: every 10 minutes (the bound on how stale the mirror can get when
+webhooks fail; pick it with the author), same image reference and security context as
+the Deployment:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: linear-scheduler
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 540
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: scheduler
+              image: ghcr.io/ulyssesv/linear:<tag>@sha256:<digest>
+              args: ["scheduler"]
+              env:
+                - name: DATABASE_URL
+                  valueFrom: { secretKeyRef: { name: linear, key: DATABASE_URL } }
+                - name: LINEAR_CLIENT_ID
+                  valueFrom: { secretKeyRef: { name: linear, key: LINEAR_CLIENT_ID } }
+                - name: LINEAR_CLIENT_SECRET
+                  valueFrom: { secretKeyRef: { name: linear, key: LINEAR_CLIENT_SECRET } }
+                - name: TOKEN_ENCRYPTION_KEY
+                  valueFrom: { secretKeyRef: { name: linear, key: TOKEN_ENCRYPTION_KEY } }
+              # securityContext, the /tmp volume and its mount as in "Security context" below
+              resources:
+                requests: { cpu: 20m, memory: 96Mi }
+                limits: { memory: 192Mi }
+```
+
+`backoffLimit: 0` because the next scheduled run is the retry; `activeDeadlineSeconds`
+keeps a run that waits on Linear's rate limit from overlapping the next one by much. The
+`migrate` Job must have run first: a pass against a database without the mirror tables
+fails. Egress to `https://api.linear.app` is needed, as for `serve`.
+
 ## Security context
 
 The image runs as uid and gid 10001, owns nothing under `/app`, and writes only to
@@ -194,7 +277,9 @@ volumes:
 CI and the release workflow run every image with the equivalent Docker flags
 (`--user 10001 --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs
 /tmp`) through `tools/container-smoke.sh` before it is published, against a throwaway
-Postgres: `migrate` twice, `serve` with `/healthz` and `/readyz`, and `scheduler`.
+Postgres: `migrate` twice, `serve` with `/healthz` and `/readyz`, and `scheduler` twice,
+bootstrap then reconcile, against a stub of Linear's API (`tools/linear-stub.mjs`, run
+with the image's own Node) through `LINEAR_API_URL`, so the smoke needs no credentials.
 
 ## Resources
 
@@ -208,7 +293,8 @@ resources:
 ```
 
 No CPU limit, to avoid throttling server rendering. Revisit when the planning sheet adds
-mirror and Electric traffic. The `migrate` Job's hints are in [Migrations](#migrations).
+mirror and Electric traffic. The `migrate` Job's hints are in [Migrations](#migrations),
+the `scheduler` CronJob's in [Scheduler](#scheduler).
 
 ## Hostname
 
