@@ -35,7 +35,17 @@ export default defineConfig({
     : {
         command: "node dist/cli.mjs serve",
         url: `http://localhost:${port}/healthz`,
-        env: { PORT: String(port), PUBLIC_URL: `http://localhost:${port}` },
+        // Harmless values for the names serve requires (MIRROR-R7); none is a credential.
+        env: {
+          PORT: String(port),
+          PUBLIC_URL: `http://localhost:${port}`,
+          DATABASE_URL: "postgres://e2e:e2e@localhost:5432/e2e",
+          LINEAR_CLIENT_ID: "e2e-client-id",
+          LINEAR_CLIENT_SECRET: "e2e-client-secret",
+          LINEAR_WEBHOOK_SECRET: "e2e-webhook-secret",
+          SESSION_SECRET: "e2e-session-secret-at-least-32-characters",
+          TOKEN_ENCRYPTION_KEY: "ZTJlLXRva2VuLWVuY3J5cHRpb24ta2V5LTMyLWJ5dGU=",
+        },
         reuseExistingServer: !process.env.CI,
         stdout: "pipe",
         timeout: 30_000,
