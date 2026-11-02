@@ -18,16 +18,17 @@ test.describe("public routes", () => {
 });
 
 test.describe("sheet routes", () => {
-  test("MIRROR-R15 an anonymous request is redirected to sign-in by the server", async ({
-    request,
-  }) => {
-    const response = await request.get("/sheets", { maxRedirects: 0 });
-    expect(response.status()).toBeGreaterThanOrEqual(300);
-    expect(response.status()).toBeLessThan(400);
-    expect(response.headers().location).toBe("/sign-in?next=%2Fsheets");
-  });
+  for (const path of ["/sheets", "/sheets/projects", "/sheets/initiatives"]) {
+    test(`MIRROR-R15 an anonymous request for ${path} is redirected to sign-in by the server`, async ({
+      request,
+    }) => {
+      const response = await request.get(path, { maxRedirects: 0 });
+      expect(response.status()).toBeGreaterThanOrEqual(300);
+      expect(response.status()).toBeLessThan(400);
+      expect(response.headers().location).toBe(`/sign-in?next=${encodeURIComponent(path)}`);
+    });
+  }
 
-  // T7 adds /sheets/projects and /sheets/initiatives under the same layout.
   test("MIRROR-R15 the sign-in page carries the requested sheet location through", async ({
     page,
   }) => {
