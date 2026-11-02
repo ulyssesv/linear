@@ -6,6 +6,7 @@ area: site-platform
 linear:
   initiative: https://linear.app/sesv/initiative/site-platform-6ac5ff8c3199
   parent: https://linear.app/sesv/project/content-7fffaf789cfa
+  document: https://linear.app/sesv/document/spec-003-site-content-information-architecture-and-look-703a7732ce9c
 supersedes: []
 created: 2026-11-02
 ---
