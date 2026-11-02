@@ -48,7 +48,7 @@ describe("site components", () => {
     const html = renderToStaticMarkup(<ContentPage meta={fixtureMeta} Content={Fixture} />);
     expect(html).toContain("data-callout");
     expect(html).toContain("Heads up");
-    expect(html).toMatch(/<p data-demo="link"><a href="\/sheets"[^>]*>Open the demo<\/a>/);
+    expect(html).toMatch(/<p data-demo="link"[^>]*><a href="\/sheets"[^>]*>Open the demo<svg/);
     expect(html).toContain('data-demo="none"');
   });
 

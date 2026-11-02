@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ArrowRightIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
 import { useViewer } from "@/components/viewer";
 import type { ContentMeta, MDXComponents, MDXContent } from "@/lib/content";
@@ -16,18 +17,25 @@ export function DemoLink({ href, children }: Readonly<{ href?: string; children?
   const viewer = useViewer();
   if (!href) {
     return (
-      <p data-demo="none" className="text-muted-foreground">
+      <p
+        data-demo="none"
+        className="not-prose rounded-lg border border-dashed px-4 py-3 text-muted-foreground text-sm"
+      >
         No demo is available yet.
       </p>
     );
   }
   return (
-    <p data-demo="link">
-      <a href={href} className="font-medium">
+    <p data-demo="link" className="not-prose flex flex-wrap items-center gap-x-4 gap-y-2">
+      <a
+        href={href}
+        className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 font-medium text-primary-foreground text-sm no-underline transition-colors hover:bg-primary/90"
+      >
         {children ?? "Open the demo"}
+        <ArrowRightIcon className="size-3.5" />
       </a>
       {viewer ? null : (
-        <span data-demo-sign-in className="block text-muted-foreground text-sm">
+        <span data-demo-sign-in className="text-muted-foreground text-sm">
           The demo needs sign-in with a Linear account of the workspace.
         </span>
       )}
@@ -38,9 +46,14 @@ export function DemoLink({ href, children }: Readonly<{ href?: string; children?
 /** A note set apart from the prose. */
 export function Callout({ title, children }: Readonly<{ title?: string; children: ReactNode }>) {
   return (
-    <aside data-callout className="not-prose my-6 rounded-md border bg-muted/40 px-4 py-3 text-sm">
-      {title ? <p className="mb-1 font-medium">{title}</p> : null}
-      <div className="space-y-2 text-muted-foreground [&_a]:underline">{children}</div>
+    <aside
+      data-callout
+      className="not-prose my-6 rounded-lg border border-l-2 border-l-brand bg-muted px-4 py-3 text-sm leading-6"
+    >
+      {title ? <p className="mb-1 font-medium text-foreground">{title}</p> : null}
+      <div className="space-y-2 text-muted-foreground [&_a]:text-brand [&_a]:underline [&_a]:underline-offset-4">
+        {children}
+      </div>
     </aside>
   );
 }

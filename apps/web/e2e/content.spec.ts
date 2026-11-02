@@ -155,7 +155,7 @@ test.describe("narrow viewport", () => {
     const menu = page.getByRole("banner").locator("details");
     const link = menu.getByRole("link", { name: "Planning sheet" });
     await expect(link).toBeHidden();
-    await menu.getByText("Menu").click();
+    await menu.getByLabel("Menu").click();
     await expect(link).toBeVisible();
     await link.click();
     await expect(page).toHaveURL(/\/planning-sheet$/);
