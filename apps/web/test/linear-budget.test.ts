@@ -4,11 +4,13 @@ import {
   bootstrapPlan,
   type EntityType,
   estimateBootstrap,
+  estimateReconcile,
   objectComplexity,
   pageComplexity,
+  reconcilePlan,
   type Selection,
 } from "../src/server/linear/budget.ts";
-import { listingQueries } from "../src/server/mirror/listing.ts";
+import { listingQueries, reconcileQueries } from "../src/server/mirror/listing.ts";
 
 // The fixture workspace of MIRROR-R27 with generous reference data.
 const fixture: Record<EntityType, number> = {
@@ -63,6 +65,31 @@ describe("bootstrap budget", () => {
       number
     >;
     expect(estimateBootstrap(empty).requests).toBe(Object.keys(bootstrapPlan).length);
+  });
+});
+
+describe("reconcile budget", () => {
+  it("MIRROR-R13 keeps every reconcile query under Linear's single-query cap and page limit", () => {
+    for (const [query, { pageSize, node }] of Object.entries(reconcilePlan)) {
+      expect(pageSize, query).toBeLessThanOrEqual(250);
+      expect(pageComplexity(pageSize, node), query).toBeLessThanOrEqual(
+        appActorHourlyBudget.maxQueryComplexity,
+      );
+    }
+  });
+
+  it("MIRROR-R13 a pass every ten minutes over the fixture workspace stays a small share of the hour", () => {
+    const estimate = estimateReconcile(fixture, { projects: 50, initiatives: 50 });
+    // Matches the arithmetic in budget.ts; update both together.
+    expect(estimate).toEqual({ requests: 10, complexity: 8_345, maxQueryComplexity: 3_067 });
+    const hourly = { requests: estimate.requests * 6, complexity: estimate.complexity * 6 };
+    expect(hourly.requests).toBeLessThan(appActorHourlyBudget.requests * 0.02);
+    expect(hourly.complexity).toBeLessThan(appActorHourlyBudget.complexity * 0.03);
+  });
+
+  it("MIRROR-R13 a pass costs far less than a bootstrap when little changed", () => {
+    const pass = estimateReconcile(fixture, { projects: 0, initiatives: 0 });
+    expect(pass.complexity).toBeLessThan(estimateBootstrap(fixture).complexity / 2);
   });
 });
 
@@ -131,5 +158,24 @@ describe("bootstrap queries", () => {
       const plan = bootstrapPlan[type as EntityType];
       expect(canonical(shape(nodes?.children ?? [])), type).toEqual(canonical(plan.node));
     }
+  });
+
+  it("MIRROR-R13 every reconcile query selects exactly the shape the budget prices", () => {
+    expect(Object.keys(reconcileQueries).sort()).toEqual(Object.keys(reconcilePlan).sort());
+    for (const [name, query] of Object.entries(reconcileQueries)) {
+      const body = query.slice(query.indexOf(") {") + 3, query.lastIndexOf("}"));
+      const [root] = parseSelection(body);
+      expect(["projects", "initiatives"], name).toContain(root?.name);
+      const nodes = root?.children?.find((child) => child.name === "nodes");
+      const plan = reconcilePlan[name as keyof typeof reconcilePlan];
+      expect(canonical(shape(nodes?.children ?? [])), name).toEqual(canonical(plan.node));
+    }
+  });
+
+  it("MIRROR-R13 the changed-entity queries filter on Linear's updatedAt", () => {
+    expect(reconcileQueries.changedProjects).toMatch(/filter: \{ updatedAt: \{ gte: \$since \} \}/);
+    expect(reconcileQueries.changedInitiatives).toMatch(
+      /filter: \{ updatedAt: \{ gte: \$since \} \}/,
+    );
   });
 });

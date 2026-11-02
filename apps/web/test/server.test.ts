@@ -1,5 +1,6 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
+import { createServer as createHttpServer } from "node:http";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -7,6 +8,7 @@ import postgres from "postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, inject, it, vi } from "vitest";
 import { closeDatabase } from "../src/server/db/client.ts";
 import { startServer } from "../src/server/start.ts";
+import { fakeLinear, fixtureWorkspace } from "./mirror-fixtures.ts";
 import type { ScratchDatabase } from "./scratch-db.ts";
 import { serveEnv } from "./serve-env.ts";
 import { scratchDatabase, testDatabaseUrl } from "./test-db.ts";
@@ -92,6 +94,32 @@ async function exit(child: ChildProcess) {
   return { code, stdout, stderr };
 }
 
+/** Serves a fetch-style handler over HTTP on a free local port: Linear, for the built CLI. */
+async function serveFetch(handler: typeof globalThis.fetch) {
+  const server = createHttpServer(async (req, res) => {
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    const url = `http://127.0.0.1${req.url ?? "/"}`;
+    const response = await handler(url, {
+      method: req.method,
+      headers: {
+        authorization: req.headers.authorization ?? "",
+      },
+      body,
+    });
+    res.writeHead(response.status, { "content-type": "application/json" });
+    res.end(await response.text());
+  });
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  const address = server.address();
+  if (address === null || typeof address === "string") throw new Error("no port");
+  return {
+    url: `http://127.0.0.1:${address.port}`,
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  };
+}
+
 async function freePort() {
   const probe = createServer();
   probe.listen(0);
@@ -109,10 +137,48 @@ describe("built CLI", () => {
     await db?.drop();
   });
 
-  it("SEED-R24 scheduler exits 2", async () => {
-    const { code, stderr } = await exit(cli(["scheduler"]));
-    expect(code).toBe(2);
-    expect(stderr).toMatch(/planning-sheet spec/);
+  it("MIRROR-R13 scheduler bootstraps, then reconciles, and exits 0 each time", async () => {
+    const scheduler = await scratchDatabase("cli_scheduler");
+    const linear = fakeLinear(fixtureWorkspace());
+    const stub = await serveFetch(linear.fetch);
+    try {
+      expect((await exit(cli(["migrate"], { DATABASE_URL: scheduler.url }))).code).toBe(0);
+      const env = {
+        DATABASE_URL: scheduler.url,
+        LINEAR_CLIENT_ID: serveEnv.LINEAR_CLIENT_ID,
+        LINEAR_CLIENT_SECRET: serveEnv.LINEAR_CLIENT_SECRET,
+        TOKEN_ENCRYPTION_KEY: serveEnv.TOKEN_ENCRYPTION_KEY,
+        LINEAR_API_URL: stub.url,
+      };
+      const first = await exit(cli(["scheduler"], env));
+      expect(first, first.stderr).toMatchObject({ code: 0 });
+      expect(JSON.parse(first.stdout)).toMatchObject({
+        event: "scheduler",
+        outcome: "ok",
+        source: "bootstrap",
+      });
+      const second = await exit(cli(["scheduler"], env));
+      expect(second, second.stderr).toMatchObject({ code: 0 });
+      expect(JSON.parse(second.stdout)).toMatchObject({ outcome: "ok", source: "reconcile" });
+      // The second process reused the token the first one stored.
+      expect(linear.calls.filter((call) => call.url.endsWith("/oauth/token"))).toHaveLength(1);
+    } finally {
+      await stub.close();
+      await scheduler.drop();
+    }
+  });
+
+  it("MIRROR-R13 scheduler exits 1 when the database cannot be reached", async () => {
+    const { code, stderr } = await exit(
+      cli(["scheduler"], {
+        DATABASE_URL: "postgres://linear:linear@127.0.0.1:1/linear",
+        LINEAR_CLIENT_ID: serveEnv.LINEAR_CLIENT_ID,
+        LINEAR_CLIENT_SECRET: serveEnv.LINEAR_CLIENT_SECRET,
+        TOKEN_ENCRYPTION_KEY: serveEnv.TOKEN_ENCRYPTION_KEY,
+      }),
+    );
+    expect(code).toBe(1);
+    expect(JSON.parse(stderr)).toMatchObject({ event: "scheduler", outcome: "failed" });
   });
 
   it("MIRROR-R5 migrate applies the bundled migrations, then finds nothing to do", async () => {

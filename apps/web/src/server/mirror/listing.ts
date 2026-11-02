@@ -1,6 +1,7 @@
 // Listing every entity of a type from Linear, page by page, and normalising the nodes
-// (MIRROR-R9, MIRROR-R10). Used by the bootstrap; the reconcile pass (T5) can reuse the
-// queries with an updatedAt filter.
+// (MIRROR-R9, MIRROR-R10, MIRROR-R13). The bootstrap lists every type in full; the
+// reconcile pass lists the reference data in full, projects and initiatives changed since a
+// time (reconcileQueries), and the ids of every project and initiative to detect removals.
 //
 // The selections and page sizes are the shapes in ../linear/budget.ts, which the budget
 // test checks against these query texts. Every field was checked against the schema in
@@ -17,8 +18,10 @@
 //   nullable and kept next to `slugId` and `url`, which are public.
 // - Archived entities are listed (`includeArchived`) so the mirror knows they are archived;
 //   trashed projects and initiatives are left out, as if Linear no longer returned them.
+// - `projects` and `initiatives` take `filter: { updatedAt: { gte } }`, a DateComparator
+//   on ProjectFilter and InitiativeFilter, and at most 250 nodes per page (`first`).
 
-import { bootstrapPlan } from "../linear/budget.ts";
+import { bootstrapPlan, reconcilePlan } from "../linear/budget.ts";
 import type { LinearClient } from "../linear/client.ts";
 import type { InitiativeCandidate } from "./scope.ts";
 import type {
@@ -33,6 +36,25 @@ import type {
 } from "./types.ts";
 
 const pageInfo = "pageInfo { hasNextPage endCursor }";
+
+const projectNode = `
+      id name slugId identifier url startDate targetDate priority health progress
+      createdAt updatedAt archivedAt completedAt canceledAt trashed labelIds
+      lead { id }
+      status { id }
+      lastUpdate { id body health createdAt }
+      teams(first: 25, includeArchived: true) { nodes { id } }
+      initiatives(first: 25, includeArchived: true) { nodes { id } }
+    `;
+
+const initiativeNode = `
+      id name slugId identifier url status targetDate priority health
+      createdAt updatedAt archivedAt completedAt trashed visibility labelIds
+      owner { id }
+      leadTeam { id }
+      lastUpdate { id body health createdAt }
+      projects(first: 50, includeArchived: true) { nodes { id } }
+    `;
 
 export const listingQueries = {
   teams: `query MirrorTeams($first: Int!, $after: String) {
@@ -67,32 +89,70 @@ export const listingQueries = {
 }`,
   projects: `query MirrorProjects($first: Int!, $after: String) {
   projects(first: $first, after: $after, includeArchived: true) {
-    nodes {
-      id name slugId identifier url startDate targetDate priority health progress
-      createdAt updatedAt archivedAt completedAt canceledAt trashed labelIds
-      lead { id }
-      status { id }
-      lastUpdate { id body health createdAt }
-      teams(first: 25, includeArchived: true) { nodes { id } }
-      initiatives(first: 25, includeArchived: true) { nodes { id } }
-    }
+    nodes {${projectNode}}
     ${pageInfo}
   }
 }`,
   initiatives: `query MirrorInitiatives($first: Int!, $after: String) {
   initiatives(first: $first, after: $after, includeArchived: true) {
-    nodes {
-      id name slugId identifier url status targetDate priority health
-      createdAt updatedAt archivedAt completedAt trashed visibility labelIds
-      owner { id }
-      leadTeam { id }
-      lastUpdate { id body health createdAt }
-      projects(first: 50, includeArchived: true) { nodes { id } }
-    }
+    nodes {${initiativeNode}}
     ${pageInfo}
   }
 }`,
 } as const;
+
+/**
+ * The reconcile pass's own queries (MIRROR-R13): projects and initiatives Linear changed
+ * at or after `$since`, with the bootstrap's node selections so both feeders write the
+ * same records, and the id of every project and initiative, to find the ones Linear no
+ * longer returns. The shapes are priced in ../linear/budget.ts reconcilePlan.
+ */
+export const reconcileQueries = {
+  changedProjects: `query MirrorChangedProjects(
+  $first: Int!, $after: String, $since: DateTimeOrDuration!
+) {
+  projects(
+    first: $first, after: $after, includeArchived: true,
+    filter: { updatedAt: { gte: $since } }
+  ) {
+    nodes {${projectNode}}
+    ${pageInfo}
+  }
+}`,
+  changedInitiatives: `query MirrorChangedInitiatives(
+  $first: Int!, $after: String, $since: DateTimeOrDuration!
+) {
+  initiatives(
+    first: $first, after: $after, includeArchived: true,
+    filter: { updatedAt: { gte: $since } }
+  ) {
+    nodes {${initiativeNode}}
+    ${pageInfo}
+  }
+}`,
+  projectIds: `query MirrorProjectIds($first: Int!, $after: String) {
+  projects(first: $first, after: $after, includeArchived: true) {
+    nodes { id trashed }
+    ${pageInfo}
+  }
+}`,
+  initiativeIds: `query MirrorInitiativeIds($first: Int!, $after: String) {
+  initiatives(first: $first, after: $after, includeArchived: true) {
+    nodes { id trashed }
+    ${pageInfo}
+  }
+}`,
+} as const;
+
+export type ReconcileQuery = keyof typeof reconcileQueries;
+
+/** The root field each reconcile query pages through. */
+const reconcileRoots: Record<ReconcileQuery, "projects" | "initiatives"> = {
+  changedProjects: "projects",
+  changedInitiatives: "initiatives",
+  projectIds: "projects",
+  initiativeIds: "initiatives",
+};
 
 export type ListedType = keyof typeof listingQueries;
 
@@ -104,27 +164,58 @@ type Page = { nodes: Node[]; pageInfo: { hasNextPage: boolean; endCursor: string
 const maxPages = 10_000;
 
 /** Every node of a listed type, following cursors until Linear says there is no more. */
-export async function listAll(client: LinearClient, type: ListedType): Promise<Node[]> {
-  const { pageSize } = bootstrapPlan[type];
+export function listAll(client: LinearClient, type: ListedType): Promise<Node[]> {
+  return listPages(client, listingQueries[type], type, bootstrapPlan[type].pageSize);
+}
+
+/**
+ * Every node a reconcile query returns. `since` is required by the changed-entity queries
+ * and ignored by the id listings.
+ */
+export function listReconcile(
+  client: LinearClient,
+  query: ReconcileQuery,
+  since?: Date,
+): Promise<Node[]> {
+  const changed = query === "changedProjects" || query === "changedInitiatives";
+  if (changed && !since) throw new Error(`${query} needs a since time`);
+  const variables = changed ? { since: since?.toISOString() } : {};
+  return listPages(
+    client,
+    reconcileQueries[query],
+    reconcileRoots[query],
+    reconcilePlan[query].pageSize,
+    variables,
+  );
+}
+
+async function listPages(
+  client: LinearClient,
+  query: string,
+  root: string,
+  pageSize: number,
+  variables: Record<string, unknown> = {},
+): Promise<Node[]> {
   const nodes: Node[] = [];
   let after: string | null = null;
   for (let page = 0; page < maxPages; page++) {
-    const data: Record<string, Page> = await client.request(listingQueries[type], {
+    const data: Record<string, Page> = await client.request(query, {
+      ...variables,
       first: pageSize,
       after,
     });
-    const connection = data[type];
+    const connection = data[root];
     if (!connection || !Array.isArray(connection.nodes)) {
-      throw new Error(`Linear returned no ${type} connection`);
+      throw new Error(`Linear returned no ${root} connection`);
     }
     nodes.push(...connection.nodes);
     if (!connection.pageInfo?.hasNextPage) return nodes;
     if (!connection.pageInfo.endCursor || connection.pageInfo.endCursor === after) {
-      throw new Error(`Linear returned a ${type} page without a new cursor`);
+      throw new Error(`Linear returned a ${root} page without a new cursor`);
     }
     after = connection.pageInfo.endCursor;
   }
-  throw new Error(`Listing ${type} took more than ${maxPages} pages`);
+  throw new Error(`Listing ${root} took more than ${maxPages} pages`);
 }
 
 const str = (value: unknown): string => (typeof value === "string" ? value : String(value ?? ""));
