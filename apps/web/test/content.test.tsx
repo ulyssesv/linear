@@ -47,7 +47,13 @@ describe("content files", () => {
 
 describe("site components", () => {
   it("CONTENT-R9 content can use the demo link and the callout", () => {
-    expect(Object.keys(contentComponents).sort()).toEqual(["Callout", "DemoLink", "Figure"]);
+    expect(Object.keys(contentComponents).sort()).toEqual([
+      "Callout",
+      "DemoLink",
+      "Figure",
+      "ProfileBadge",
+      "ProfileBadges",
+    ]);
     const html = renderToStaticMarkup(<ContentPage meta={fixtureMeta} Content={Fixture} />);
     expect(html).toContain("data-callout");
     expect(html).toContain("Heads up");

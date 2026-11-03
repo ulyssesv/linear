@@ -125,3 +125,24 @@ test.describe("same-origin loading", () => {
     });
   }
 });
+
+test.describe("font loading", () => {
+  test("CONTENT-R19 the text font is preloaded from the site, the same file the stylesheet uses", async ({
+    page,
+    baseURL,
+  }) => {
+    const requested: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/inter-latin-wght-normal-")) requested.push(request.url());
+    });
+    await page.goto("/", { waitUntil: "networkidle" });
+    const preload = page.locator('head link[rel="preload"][as="font"]');
+    await expect(preload).toHaveCount(1);
+    await expect(preload).toHaveAttribute("type", "font/woff2");
+    await expect(preload).toHaveAttribute("crossorigin", "anonymous");
+    const href = new URL((await preload.getAttribute("href")) as string, baseURL).href;
+    // One request: the @font-face of the stylesheet reuses the preloaded response, so the
+    // first paint does not wait for the stylesheet to discover the font.
+    expect(requested).toEqual([href]);
+  });
+});

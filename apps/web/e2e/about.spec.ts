@@ -34,12 +34,18 @@ test.describe("about page", () => {
     await expect(main.locator("[data-callout]")).toContainText("Placeholder");
   });
 
-  test("CONTENT-R14 /about links to the author's GitHub profile", async ({ page }) => {
+  test("CONTENT-R14 /about links to the author's GitHub and LinkedIn profiles as badges", async ({
+    page,
+  }) => {
     const main = page.getByRole("main");
-    await expect(main.getByRole("link", { name: "github.com/ulyssesv" })).toHaveAttribute(
-      "href",
-      "https://github.com/ulyssesv",
-    );
+    const github = main.getByRole("link", { name: "GitHub", exact: true });
+    await expect(github).toHaveAttribute("href", "https://github.com/ulyssesv");
+    await expect(github).toHaveAttribute("data-profile", "github");
+    await expect(github.locator("svg")).toBeVisible();
+    const linkedin = main.getByRole("link", { name: "LinkedIn", exact: true });
+    await expect(linkedin).toHaveAttribute("href", "https://www.linkedin.com/in/ulyssesv/");
+    await expect(linkedin).toHaveAttribute("data-profile", "linkedin");
+    await expect(linkedin.locator("svg")).toBeVisible();
     await expect(main.locator('a[href^="mailto:"]')).toHaveCount(0);
   });
 });

@@ -11,7 +11,8 @@ import type { Theme } from "@/theme";
 // with the current page marked, the theme control (CONTENT-R18) and the account control.
 // Server-rendered and usable without JavaScript: below the large breakpoint (1024px) the
 // navigation folds into a <details> menu (CONTENT-R6), and sign-out and the theme are
-// plain form POSTs.
+// plain form POSTs. The header stays one row down to phone widths, signed in or not; below
+// the small breakpoint (640px) the signed-in name moves from the header into the menu.
 export function SiteHeader({
   user,
   theme,
@@ -28,7 +29,7 @@ export function SiteHeader({
   const links = <NavLinks pathname={pathname} />;
   return (
     <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-2 sm:gap-x-6 text-[13px]">
+      <div className="mx-auto flex min-h-14 max-w-5xl flex-wrap items-center gap-x-3 gap-y-2 px-6 py-2 sm:gap-x-6 text-[13px]">
         <SiteLink
           href="/"
           className="font-semibold text-foreground text-sm tracking-[-0.01em] hover:text-foreground/80"
@@ -52,12 +53,21 @@ export function SiteHeader({
             >
               <MenuIcon />
             </summary>
-            <nav
-              aria-label="Main"
-              className="absolute right-0 z-10 mt-2 w-52 rounded-lg border bg-popover p-1.5 shadow-lg"
-            >
-              <ul className="flex flex-col">{links}</ul>
-            </nav>
+            <div className="absolute right-0 z-10 mt-2 w-52 rounded-lg border bg-popover p-1.5 shadow-lg">
+              {user ? (
+                // Below the small breakpoint the header has no room for the name; the menu
+                // says who is signed in instead (CONTENT-R4, CONTENT-R6).
+                <p
+                  data-menu-user
+                  className="mb-1 break-words border-b px-2 pt-1 pb-2 text-muted-foreground sm:hidden"
+                >
+                  Signed in as <span className="text-foreground">{user.name}</span>
+                </p>
+              ) : null}
+              <nav aria-label="Main">
+                <ul className="flex flex-col">{links}</ul>
+              </nav>
+            </div>
           </details>
         </div>
       </div>
@@ -84,23 +94,25 @@ function NavLinks({ pathname }: Readonly<{ pathname: string }>) {
 
 // The account control (CONTENT-R4, MIRROR-R15): a sign-in link with Linear's mark that
 // returns to this page (CONTENT-R16), or one bordered group, like the theme control, with
-// the user's name and a sign-out button that returns here when this page is public.
+// the user's name (from the small breakpoint up) and a sign-out button that returns here
+// when this page is public.
 function AccountControl({ user, href }: Readonly<{ user: SessionUser | null; href: string }>) {
   return (
     <nav aria-label="Account" className="flex items-center">
       {user ? (
         <div data-account className="flex h-7 items-stretch rounded-md border">
+          {/* Hidden on phones so the header stays one row; the menu shows it there. */}
           <span
             data-testid="signed-in-user"
-            className="max-w-28 self-center truncate px-2.5 text-muted-foreground sm:max-w-44"
+            className="hidden max-w-44 self-center truncate px-2.5 text-muted-foreground sm:block"
           >
             {user.name}
           </span>
-          <form method="post" action={signOutPath} className="flex border-l">
+          <form method="post" action={signOutPath} className="flex sm:border-l">
             <input type="hidden" name="next" value={href} />
             <button
               type="submit"
-              className="rounded-r-[5px] px-2.5 text-foreground transition-colors hover:bg-accent"
+              className="whitespace-nowrap rounded-[5px] px-2.5 text-foreground transition-colors hover:bg-accent sm:rounded-l-none"
             >
               Sign out
             </button>
