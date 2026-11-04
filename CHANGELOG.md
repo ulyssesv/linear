@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/ulyssesv/linear/compare/v0.2.0...v0.2.1) (2026-11-04)
+
+
+### Bug Fixes
+
+* **web:** one-row header on phones when signed in, font preload, profile badges on /about ([#45](https://github.com/ulyssesv/linear/issues/45)) ([64edf38](https://github.com/ulyssesv/linear/commit/64edf38e96f27fadb4688a4d89ccd35ffe22401a))
+
 ## [0.2.0](https://github.com/ulyssesv/linear/compare/v0.1.0...v0.2.0) (2026-11-02)
 
 
