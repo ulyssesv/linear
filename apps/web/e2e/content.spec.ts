@@ -181,11 +181,7 @@ test.describe("header row", () => {
       signIn,
     }) => {
       if (signedIn) await signIn({ name: "Someone With A Rather Long Display Name" });
-      // Signed in on a phone, the name and sign-out button take a second row (known).
-      const widths = signedIn
-        ? [640, 768, 900, 1023, 1024, 1280]
-        : [375, 640, 768, 900, 1023, 1024, 1280];
-      for (const width of widths) {
+      for (const width of [360, 375, 414, 639, 640, 768, 900, 1023, 1024, 1280]) {
         await page.setViewportSize({ width, height: 600 });
         await page.goto("/about");
         const height = await page
@@ -196,6 +192,40 @@ test.describe("header row", () => {
       }
     });
   }
+});
+
+test.describe("signed-in header on a phone", () => {
+  test.use({ viewport: { width: 375, height: 740 } });
+
+  test("CONTENT-R4 CONTENT-R6 the name moves from the header into the menu", async ({
+    page,
+    signIn,
+  }) => {
+    const user = await signIn({ name: "Someone With A Rather Long Display Name" });
+    await page.goto("/about");
+    const header = page.getByRole("banner");
+    await expect(header.getByTestId("signed-in-user")).toBeHidden();
+    await expect(header.getByRole("button", { name: "Sign out" })).toBeVisible();
+    const name = header.locator("[data-menu-user]");
+    await expect(name).toBeHidden();
+    await header.getByLabel("Menu").click();
+    await expect(name).toBeVisible();
+    await expect(name).toHaveText(`Signed in as ${user.name}`);
+  });
+
+  test("CONTENT-R4 from the small breakpoint the header shows the name, the menu does not", async ({
+    page,
+    signIn,
+  }) => {
+    const user = await signIn();
+    await page.setViewportSize({ width: 640, height: 740 });
+    await page.goto("/about");
+    const header = page.getByRole("banner");
+    await expect(header.getByTestId("signed-in-user")).toHaveText(user.name);
+    await expect(header.getByTestId("signed-in-user")).toBeVisible();
+    await header.getByLabel("Menu").click();
+    await expect(header.locator("[data-menu-user]")).toBeHidden();
+  });
 });
 
 test.describe("titles", () => {

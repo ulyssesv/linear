@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { ArrowRightIcon } from "@/components/icons";
+import { ArrowRightIcon, GithubIcon, LinkedinIcon } from "@/components/icons";
 import { PageContainer } from "@/components/page";
 import { Photo } from "@/components/photo";
 import { SiteLink } from "@/components/site-link";
@@ -94,8 +94,45 @@ export function Figure({
   );
 }
 
+const profileIcons = { github: GithubIcon, linkedin: LinkedinIcon } as const;
+
+/** A row of profile badges, each a <ProfileBadge> (CONTENT-R14). */
+export function ProfileBadges({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div data-profiles className="not-prose flex flex-wrap gap-2">
+      {children}
+    </div>
+  );
+}
+
+/** A link to one of the author's profiles, as a bordered badge with the network's icon
+ * (CONTENT-R14). */
+export function ProfileBadge({
+  href,
+  network,
+  children,
+}: Readonly<{ href: string; network: keyof typeof profileIcons; children: ReactNode }>) {
+  const Icon = profileIcons[network];
+  return (
+    <a
+      href={href}
+      data-profile={network}
+      className="inline-flex h-8 items-center gap-2 rounded-md border bg-card px-3 font-medium text-foreground text-sm no-underline transition-colors hover:bg-accent"
+    >
+      <Icon className="size-4 text-muted-foreground" />
+      {children}
+    </a>
+  );
+}
+
 /** The fixed set of site components content files can use (CONTENT-R9). */
-export const contentComponents = { DemoLink, Callout, Figure } satisfies MDXComponents;
+export const contentComponents = {
+  DemoLink,
+  Callout,
+  Figure,
+  ProfileBadges,
+  ProfileBadge,
+} satisfies MDXComponents;
 
 /** What content renders with: the site components, and links between pages that go
  * through the router (CONTENT-R21). */

@@ -1,3 +1,4 @@
+import interLatin from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 import {
   createRootRoute,
   HeadContent,
@@ -49,7 +50,19 @@ export const Route = createRootRoute({
         content: "A cover letter to Linear: ideas and experiments, built in the open.",
       },
     ],
-    links: [{ rel: "stylesheet", href: styles }],
+    links: [
+      { rel: "stylesheet", href: styles },
+      // The text font starts downloading with the stylesheet instead of after it, so the
+      // first paint is already in Inter and the text does not reflow when the font swaps
+      // in (CONTENT-R15). Only the Latin subset: the copy is English.
+      {
+        rel: "preload",
+        href: interLatin,
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+    ],
   }),
   component: RootComponent,
   notFoundComponent: NotFound,
